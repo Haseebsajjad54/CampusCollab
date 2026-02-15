@@ -41,13 +41,15 @@ class GetApplicationByIdUseCase {
   Future<Either<Failure, Application>> call(String applicationId) async {
     if (applicationId.isEmpty) {
       return  Left(
-        ValidationFailure(message: 'Application ID cannot be empty'),
+        ValidationFailure( 'Application ID cannot be empty'),
       );
     }
 
     return await repository.getApplicationById(applicationId);
   }
 }
+
+
 
 /// Get Applications For Post Use Case
 ///
@@ -60,7 +62,7 @@ class GetApplicationsForPostUseCase {
   Future<Either<Failure, List<Application>>> call(String postId) async {
     if (postId.isEmpty) {
       return  Left(
-        ValidationFailure(message: 'Post ID cannot be empty'),
+        ValidationFailure( 'Post ID cannot be empty'),
       );
     }
 

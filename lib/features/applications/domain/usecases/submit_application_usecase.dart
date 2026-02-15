@@ -25,20 +25,20 @@ class SubmitApplicationUseCase {
     // Validate inputs
     if (postId.isEmpty) {
       return  Left(
-        ValidationFailure(message: 'Post ID cannot be empty'),
+        ValidationFailure( 'Post ID cannot be empty'),
       );
     }
 
     if (message.trim().isEmpty) {
       return  Left(
-        ValidationFailure(message: 'Application message cannot be empty'),
+        ValidationFailure( 'Application message cannot be empty'),
       );
     }
 
     if (message.length < 20) {
       return  Left(
         ValidationFailure(
-          message: 'Application message must be at least 20 characters',
+           'Application message must be at least 20 characters',
         ),
       );
     }

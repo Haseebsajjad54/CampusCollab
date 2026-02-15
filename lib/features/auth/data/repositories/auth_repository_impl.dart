@@ -11,6 +11,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<AppUser> signUp({
     required String email,
     required String password,
+    required String fullName,
   }) async {
     final user = await remoteDataSource.signUp(email, password);
 

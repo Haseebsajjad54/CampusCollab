@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:postgrest/src/types.dart';
 
 /// Application entity - Domain layer
 class Application extends Equatable {
@@ -87,6 +88,40 @@ class Application extends Equatable {
     applicantYear,
     responseMessage,
   ];
+
+  factory Application.fromJson(Map<String, dynamic> json) {
+    return Application(
+      id: json['id'] as String,
+      postId: json['post_id'] as String,
+      applicantId: json['applicant_id'] as String,
+      message: json['message'] as String,
+      status: ApplicationStatus.fromString(json['status'] as String),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+
+      // Optional populated fields
+      postTitle: json['post_title'] as String?,
+      postType: json['post_type'] as String?,
+      applicantName: json['applicant_name'] as String?,
+      applicantImage: json['applicant_image'] as String?,
+      applicantDepartment: json['applicant_department'] as String?,
+      applicantYear: json['applicant_year'] as int?,
+      responseMessage: json['response_message'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'post_id': postId,
+      'applicant_id': applicantId,
+      'message': message,
+      'status': status.name,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'response_message': responseMessage,
+    };
+  }
 }
 
 /// Application status enum

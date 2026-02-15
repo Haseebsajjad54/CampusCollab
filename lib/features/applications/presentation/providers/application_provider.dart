@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../data/datasources/application_remote_datasource.dart';
 import '../../data/models/application_model.dart';
 import '../../data/repositories/application_repository_impl.dart';
 import '../../domain/entities/application.dart';

@@ -1,16 +1,27 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/user.dart';
+import '../../domain/usecases/signup_usecase.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
-import '../../domain/usecases/signup_usecase.dart';
 
+/// Auth State Status
+enum AuthStatus {
+  initial,
+  loading,
+  authenticated,
+  unauthenticated,
+  error,
+}
+
+/// Improved Auth Provider with Error Handling
 class AuthProvider extends ChangeNotifier {
   final SignUpUseCase signUpUseCase;
   final SignInUseCase signInUseCase;
   final SignOutUseCase signOutUseCase;
 
   AppUser? _user;
-  bool _isLoading = false;
+  AuthStatus _status = AuthStatus.initial;
+  String? _errorMessage;
 
   AuthProvider({
     required this.signUpUseCase,
@@ -18,32 +29,92 @@ class AuthProvider extends ChangeNotifier {
     required this.signOutUseCase,
   });
 
+  // Getters
   AppUser? get user => _user;
-  bool get isLoading => _isLoading;
+  AuthStatus get status => _status;
+  String? get errorMessage => _errorMessage;
+  bool get isLoading => _status == AuthStatus.loading;
+  bool get isAuthenticated => _status == AuthStatus.authenticated && _user != null;
 
-  Future<void> signUp(String email, String password) async {
-    _isLoading = true;
-    notifyListeners();
+  /// Sign Up with Error Handling
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {
+    try {
+      _status = AuthStatus.loading;
+      _errorMessage = null;
+      notifyListeners();
 
-    _user = await signUpUseCase(email, password);
+      // Call use case (it should validate)
+      _user = await signUpUseCase(
+        email: email,
+        password: password,
+        fullName: fullName,
+      );
 
-    _isLoading = false;
-    notifyListeners();
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
   }
 
-  Future<void> signIn(String email, String password) async {
-    _isLoading = true;
-    notifyListeners();
+  /// Sign In with Error Handling
+  Future<bool> signIn( {
+    required String email,
+    required String password,
+  }) async {
+    try {
+      _status = AuthStatus.loading;
+      _errorMessage = null;
+      notifyListeners();
 
-    _user = await signInUseCase(email, password);
+      _user = await signInUseCase.call( email, password);
 
-    _isLoading = false;
-    notifyListeners();
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
   }
 
+  /// Sign Out
   Future<void> signOut() async {
-    await signOutUseCase();
-    _user = null;
+    try {
+      await signOutUseCase();
+      _user = null;
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+    }
+  }
+
+  /// Clear Error
+  void clearError() {
+    _errorMessage = null;
     notifyListeners();
+  }
+
+  Future verifyEmail({required String email, required String token}) async {
+    // TODO: Implement email verification via Supabase
+    return true;
+  }
+
+  Future<bool> sendPasswordResetEmail(String trim) async {
+    // TODO: Implement password reset via Supabase
+    return true;
+
   }
 }

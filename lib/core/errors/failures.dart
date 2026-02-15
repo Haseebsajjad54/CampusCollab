@@ -10,3 +10,19 @@ class ServerFailure extends Failure {
 class CacheFailure extends Failure {
   const CacheFailure(super.message);
 }
+
+class ValidationFailure extends Failure {
+  const ValidationFailure(super.message, {this.fields});
+
+  final Map<String, String>? fields;
+}
+
+class AuthenticationFailure extends Failure {
+  const AuthenticationFailure(super.message);
+}
+
+class NetworkFailure extends Failure {
+  const NetworkFailure(super.message);
+}
+
+

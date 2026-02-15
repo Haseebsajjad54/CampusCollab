@@ -27,7 +27,7 @@ class UpdateApplicationStatusUseCase {
     // Validate inputs
     if (applicationId.isEmpty) {
       return  Left(
-        ValidationFailure(message: 'Application ID cannot be empty'),
+        ValidationFailure( 'Application ID cannot be empty'),
       );
     }
 
@@ -36,7 +36,7 @@ class UpdateApplicationStatusUseCase {
         status != ApplicationStatus.rejected) {
       return  Left(
         ValidationFailure(
-          message: 'Status must be either accepted or rejected',
+           'Status must be either accepted or rejected',
         ),
       );
     }
@@ -61,7 +61,7 @@ class WithdrawApplicationUseCase {
   Future<Either<Failure, void>> call(String applicationId) async {
     if (applicationId.isEmpty) {
       return Left(
-        ValidationFailure(message: 'Application ID cannot be empty'),
+        ValidationFailure( 'Application ID cannot be empty'),
       );
     }
 

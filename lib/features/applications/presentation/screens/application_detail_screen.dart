@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/config/theme/app_colors.dart';
-import '../../../../shared/widgets/custom_widgets.dart';
+import '../../../../core/config/theme/app_theme.dart';
 import '../../data/models/application_model.dart';
 import '../../domain/entities/application.dart';
 import '../providers/application_provider.dart';
 import '../widgets/application_status_badge.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/loading_indicator.dart';
 
 /// Application Detail Screen
 ///
@@ -576,12 +578,12 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
                 children: [
                   Text(
                     title,
-                    style: theme.textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     time,
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textTertiary,
                     ),
                   ),
