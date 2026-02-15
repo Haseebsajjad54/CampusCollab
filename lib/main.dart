@@ -4,7 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/config/theme/app_theme.dart';
 import 'core/config/theme/app_colors.dart';
+import 'features/applications/presentation/providers/application_provider.dart';
 import 'features/applications/presentation/screens/my_applications_screen.dart';
+import 'features/auth/data/datasources/auth_local_datasource.dart';
 import 'features/auth/data/datasources/auth_remote_datasource.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/usecases/login_usecase.dart';
@@ -40,9 +42,11 @@ Future<void> main() async {
 
   // Remote Data Source
   final authRemoteDataSource = AuthRemoteDataSourceImpl(supabaseClient);
+  final authLocalDataSource = AuthLocalDataSourceImpl();
+
 
   // Repository
-  final authRepository = AuthRepositoryImpl( authRemoteDataSource);
+  final authRepository = AuthRepositoryImpl( authRemoteDataSource,authLocalDataSource);
 
   // UseCases
   final signUpUseCase = SignUpUseCase(authRepository);
@@ -61,7 +65,8 @@ Future<void> main() async {
         ),
 
         // You can add more providers here, e.g., ApplicationProvider
-        // ChangeNotifierProvider(create: (_) => ApplicationProvider()),
+        ChangeNotifierProvider(create: (_) => ApplicationProvider()),
+        // ChangeNotifierProvider(create: (_)=>MatchesProvider()),)
       ],
       child: const App(),
     ),

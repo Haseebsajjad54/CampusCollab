@@ -1,11 +1,15 @@
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../datasources/auth_local_datasource.dart';
 import '../datasources/auth_remote_datasource.dart';
+import '../models/user_model.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
+  final AuthLocalDataSource localDataSource;
 
-  AuthRepositoryImpl(this.remoteDataSource);
+
+  AuthRepositoryImpl(this.remoteDataSource, this.localDataSource);
 
   @override
   Future<AppUser> signUp({
@@ -42,15 +46,16 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  AppUser? getCurrentUser() {
-    final user = remoteDataSource.getCurrentUser();
+  Future<AppUser?> getCurrentUser() async {
+    final cachedUser = await localDataSource.getCachedUser();
 
-    if (user == null) return null;
+    if (cachedUser != null) {
+      return cachedUser;
+    }
 
-    return AppUser(
-      id: user.id,
-      email: user.email ?? '',
-      fullName: '',
-    );
+    final supabaseUser = remoteDataSource.getCurrentUser();
+    if (supabaseUser == null) return null;
+
+    return UserModel.fromSupabaseUser(supabaseUser);
   }
 }

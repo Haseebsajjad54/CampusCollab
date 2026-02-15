@@ -1,3 +1,5 @@
+import 'package:campus_collab/features/applications/presentation/screens/my_applications_screen.dart';
+import 'package:campus_collab/features/auth/presentation/screens/email_verification_screen.dart';
 import 'package:campus_collab/features/auth/presentation/screens/signup_screen.dart';
 import 'package:campus_collab/features/matching/presentation/screens/matches_screen.dart';
 import 'package:flutter/material.dart';
@@ -156,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen>
                         return AuthButton(
                           text: 'SIGN IN',
                           isLoading: provider.isLoading,
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_)=>MatchesScreen())) ,
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_)=> EmailVerificationScreen(email: "haseebsajjad54@gmail.com"))) ,
                           icon: Icons.login,
                         );
                         // _handleLogin(provider)
