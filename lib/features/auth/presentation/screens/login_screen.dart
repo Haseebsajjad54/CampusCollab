@@ -1,3 +1,5 @@
+import 'package:campus_collab/features/auth/presentation/screens/signup_screen.dart';
+import 'package:campus_collab/features/matching/presentation/screens/matches_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
@@ -5,6 +7,7 @@ import '../../../../core/config/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/auth_button.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -132,7 +135,8 @@ class _LoginScreenState extends State<LoginScreen>
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          Navigator.pushNamed(context, '/forgot-password');
+                          Navigator.push(context, MaterialPageRoute(builder: (_)=>ForgotPasswordScreen()));
+                          // Navigator.pushNamed(context, '/forgot-password');
                         },
                         child: Text(
                           'Forgot Password?',
@@ -152,9 +156,10 @@ class _LoginScreenState extends State<LoginScreen>
                         return AuthButton(
                           text: 'SIGN IN',
                           isLoading: provider.isLoading,
-                          onPressed: () => _handleLogin(provider),
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_)=>MatchesScreen())) ,
                           icon: Icons.login,
                         );
+                        // _handleLogin(provider)
                       },
                     ),
 
@@ -170,7 +175,8 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                         GestureDetector(
                           onTap: () {
-                            Navigator.pushNamed(context, '/signup');
+                            Navigator.push(context, MaterialPageRoute(builder: (_)=>SignUpScreen()));
+                            // Navigator.pushNamed(context, '/signup');
                           },
                           child: Text(
                             'Sign Up',

@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/datasources/application_remote_datasource.dart';
 import '../../data/models/application_model.dart';
 import '../../data/repositories/application_repository_impl.dart';
-import '../../domain/entities/application.dart';
 import '../../domain/usecases/get_applications_usecase.dart';
 import '../../domain/usecases/submit_application_usecase.dart';
 import '../../domain/usecases/update_application_status_usecase.dart';
@@ -258,7 +257,7 @@ class ApplicationProvider extends ChangeNotifier {
           (_) {
         // Remove from sent applications list
         final updatedList = _state.sentApplications
-            .where((app) => app?.id != applicationId)
+            .where((app) => app.id != applicationId)
             .toList();
 
         _state = _state.copyWith(

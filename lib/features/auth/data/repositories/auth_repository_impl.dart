@@ -18,6 +18,7 @@ class AuthRepositoryImpl implements AuthRepository {
     return AppUser(
       id: user.id,
       email: user.email ?? '',
+      fullName: '',
     );
   }
 
@@ -31,6 +32,7 @@ class AuthRepositoryImpl implements AuthRepository {
     return AppUser(
       id: user.id,
       email: user.email ?? '',
+      fullName: '',
     );
   }
 
@@ -48,6 +50,7 @@ class AuthRepositoryImpl implements AuthRepository {
     return AppUser(
       id: user.id,
       email: user.email ?? '',
+      fullName: '',
     );
   }
 }
