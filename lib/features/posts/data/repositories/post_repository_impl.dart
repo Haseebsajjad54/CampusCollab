@@ -11,23 +11,32 @@ class PostRepositoryImpl extends PostRepository{
   PostRepositoryImpl(this.dataSource);
 
   @override
-  Future<Either<Failure, Post>> createPost(Post post) {
-    // TODO: implement createPost
-    //throw UnimplementedError();
+  Future<Either<Failure, Post>> createPost(Post post) async{
+try{
+  return Right(dataSource.createPost(post) as Post);
 
-    return dataSource.createPost(post);
+}catch(e){
+  return Left(ServerFailure(e.toString()));
+}
   }
 
   @override
-  Future<Either<Failure, void>> deletePost(String postId) {
-    // TODO: implement deletePost
-    throw UnimplementedError();
+  Future<Either<Failure, void>> deletePost(String postId) async {
+    try{
+      dataSource.deletePost(postId);
+      return const Right(null);
+    }catch(e){
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<Either<Failure, Post>> editPost(Post post) {
-    // TODO: implement editPost
-    throw UnimplementedError();
+  Future<Either<Failure, Post>> editPost(Post post) async {
+    try{
+      return Right(dataSource.editPost(post) as Post);
+    }catch(e){
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
@@ -37,15 +46,22 @@ class PostRepositoryImpl extends PostRepository{
   }
 
   @override
-  Future<Either<Failure, Post>> getPost(String postId) {
-    // TODO: implement getPost
-    throw UnimplementedError();
+  Future<Either<Failure, Post>> getPost(String postId) async {
+    try{
+      return Right(dataSource.getPost(postId) as Post);
+      }catch(e){
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<Either<Failure, List<Post>>> getPosts() {
-    // TODO: implement getPosts
-    throw UnimplementedError();
+  Future<Either<Failure, List<Post>>> getPosts() async{
+    try{
+      return Right(dataSource.getPosts() as List<Post>);
+    }catch(e){
+      return Left(ServerFailure(e.toString()));
+
+    }
   }
 
   @override

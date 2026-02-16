@@ -1,3 +1,4 @@
+import 'package:campus_collab/features/posts/data/models/post_model.dart';
 import 'package:dartz/dartz.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -36,41 +37,103 @@ class PostRemoteDataSourceImpl implements PostRemoteDataSource {
   PostRemoteDataSourceImpl(this.client);
 
   @override
-  Future<Either<Failure, Post>> createPost(Post post) {
-    // TODO: implement createPost
-    // throw UnimplementedError();
+  Future<Either<Failure, Post>> createPost(Post post) async {
+    try {
+      final postModel = PostModel.fromEntity(post);
 
-    // return client.from('posts').insert();
+      final response = await client
+          .from('posts')
+          .insert(postModel.toJson())
+          .select()
+          .single();
+
+      final createdPost = PostModel.fromJson(response);
+
+      return Right(createdPost);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+
+  @override
+  Future<Either<Failure, void>> deletePost(String postId) async {
+    try{
+      client.from('posts').delete().eq('id', postId);
+      return const Right(null);
+    }catch(e){
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<Either<Failure, void>> deletePost(String postId) {
-    // TODO: implement deletePost
-    throw UnimplementedError();
+  Future<Either<Failure, Post>> editPost(Post post)async {
+    try{
+      final postModel = PostModel.fromEntity(post);
+      final response = await client
+          .from('posts')
+          .update(postModel.toJson())
+          .eq('id', post.id);
+      final updatedPost = PostModel.fromJson(response);
+      return Right(updatedPost);
+
+
+    }catch(e){
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<Either<Failure, Post>> editPost(Post post) {
-    // TODO: implement editPost
-    throw UnimplementedError();
+  @override
+  Future<Either<Failure, List<Post>>> filterPosts(String filter) async {
+    try {
+      final response = await client
+          .from('posts')
+          .select()
+          .eq('status', filter)
+          .eq('is_published', true)
+          .order('created_at', ascending: false);
+
+      final posts = (response as List)
+          .map((json) => PostModel.fromJson(json).toEntity())
+          .toList();
+
+      return Right(posts);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+
+  @override
+  Future<Either<Failure, Post>> getPost(String postId) async {
+    try{
+      final response= await client
+          .from('posts')
+          .select()
+          .eq('id', postId)
+          .single();
+      final post = PostModel.fromJson(response).toEntity();
+      return Right(post);
+    }catch(e){
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<Either<Failure, List<Post>>> filterPosts(String filter) {
-    // TODO: implement filterPosts
-    throw UnimplementedError();
-  }
+  Future<Either<Failure, List<Post>>> getPosts()async {
+      try{
+        final response = await client
+            .from('posts')
+            .select()
+            .eq('is_published', true);
+        final posts = (response as List)
+            .map((json) => PostModel.fromJson(json).toEntity());
+        return Right(posts.toList());
 
-  @override
-  Future<Either<Failure, Post>> getPost(String postId) {
-    // TODO: implement getPost
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Either<Failure, List<Post>>> getPosts() {
-    // TODO: implement getPosts
-    throw UnimplementedError();
+      }catch(e){
+        return Left(ServerFailure(e.toString()));
+      }
   }
 
   @override

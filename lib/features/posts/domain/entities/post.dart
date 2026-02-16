@@ -50,4 +50,5 @@ class Post extends Equatable {
     createdAt,
     updatedAt,
   ];
+
 }

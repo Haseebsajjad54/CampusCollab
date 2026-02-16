@@ -39,6 +39,43 @@ class PostModel extends Post {
     );
   }
 
+  factory PostModel.fromEntity(Post entity) {
+    return PostModel(
+      id: entity.id,
+      authorId: entity.authorId,
+      postType: entity.postType,
+      title: entity.title,
+      description: entity.description,
+      projectDomain: entity.projectDomain,
+      requiredTeamSize: entity.requiredTeamSize,
+      currentTeamSize: entity.currentTeamSize,
+      deadline: entity.deadline,
+      status: entity.status,
+      isPublished: entity.isPublished,
+      viewCount: entity.viewCount,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+    );
+  }
+  Post toEntity() {
+    return Post(
+      id: id,
+      authorId: authorId,
+      postType: postType,
+      title: title,
+      description: description,
+      projectDomain: projectDomain,
+      requiredTeamSize: requiredTeamSize,
+      currentTeamSize: currentTeamSize,
+      deadline: deadline,
+      status: status,
+      isPublished: isPublished,
+      viewCount: viewCount,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
