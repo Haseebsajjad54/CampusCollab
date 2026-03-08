@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:postgrest/src/types.dart';
 
 /// Application entity - Domain layer
 class Application extends Equatable {

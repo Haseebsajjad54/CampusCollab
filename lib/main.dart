@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'app.dart';
-import 'core/config/theme/app_theme.dart';
 import 'core/config/theme/app_colors.dart';
+import 'core/config/theme/app_theme.dart';
 import 'features/applications/presentation/providers/application_provider.dart';
 import 'features/applications/presentation/screens/my_applications_screen.dart';
 import 'features/auth/data/datasources/auth_local_datasource.dart';
@@ -13,13 +15,10 @@ import 'features/auth/domain/usecases/login_usecase.dart';
 import 'features/auth/domain/usecases/logout_usecase.dart';
 import 'features/auth/domain/usecases/signup_usecase.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
-import 'features/posts/presentation/screens/post_detail_screen.dart';
-import 'features/posts/presentation/screens/post_feed_screen.dart';
 import 'features/matching/presentation/screens/matches_screen.dart';
-import 'features/messaging/presentation/screens/conversations_screen.dart';
 import 'features/notifications/presentation/screens/notifications_screen.dart';
+import 'features/posts/presentation/screens/post_feed_screen.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
-import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

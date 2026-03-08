@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui';
 import '../../../../core/config/theme/app_colors.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -513,7 +512,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 level: skill['level'],
               ),
             );
-          }).toList(),
+          }),
 
           const SizedBox(height: 32),
 

@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
-import 'dart:ui';
 import '../../../../core/config/theme/app_colors.dart';
 
 class MatchesScreen extends StatefulWidget {
@@ -619,7 +617,7 @@ class _MatchPostCardState extends State<MatchPostCard> {
       height: 52,
       decoration: BoxDecoration(
         gradient: gradient,
-        color: color != null ? color.withOpacity(0.1) : null,
+        color: color?.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: color ?? Colors.transparent,

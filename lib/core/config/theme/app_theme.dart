@@ -15,12 +15,10 @@ class AppTheme {
         secondary: AppColors.accent,
         tertiary: AppColors.accentBlue,
         surface: AppColors.surface,
-        background: AppColors.background,
         error: AppColors.error,
         onPrimary: AppColors.textPrimary,
         onSecondary: AppColors.textPrimary,
         onSurface: AppColors.textPrimary,
-        onBackground: AppColors.textPrimary,
       ),
 
       // Typography - Luxury Editorial Style

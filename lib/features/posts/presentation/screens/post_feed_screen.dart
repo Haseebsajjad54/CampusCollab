@@ -13,7 +13,7 @@ class PostFeedScreen extends StatefulWidget {
 class _PostFeedScreenState extends State<PostFeedScreen> with SingleTickerProviderStateMixin {
   late AnimationController _headerController;
   final ScrollController _scrollController = ScrollController();
-  bool _isSearchExpanded = false;
+  final bool _isSearchExpanded = false;
   double _scrollOffset = 0;
 
   // Mock data

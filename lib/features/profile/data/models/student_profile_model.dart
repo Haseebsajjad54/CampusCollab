@@ -1,4 +1,3 @@
-import 'package:equatable/equatable.dart';
 import '../../domain/entities/student_profile.dart';
 
 /// Profile Data Model - Data Layer

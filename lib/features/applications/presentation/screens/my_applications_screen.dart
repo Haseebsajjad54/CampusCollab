@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import '../../../../core/config/theme/app_colors.dart';
 
 class ApplicationsScreen extends StatefulWidget {

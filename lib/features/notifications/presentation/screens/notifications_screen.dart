@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import '../../../../core/config/theme/app_colors.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -398,7 +397,7 @@ class NotificationCard extends StatefulWidget {
 }
 
 class _NotificationCardState extends State<NotificationCard> {
-  bool _isDismissing = false;
+  final bool _isDismissing = false;
 
   @override
   Widget build(BuildContext context) {

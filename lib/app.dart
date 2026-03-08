@@ -1,3 +1,4 @@
+import 'package:campus_collab/features/messaging/domain/entities/conversation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/config/theme/app_theme.dart';
@@ -47,7 +48,7 @@ class App extends StatelessWidget {
       routes: _buildRoutes(),
 
       // Route generator for dynamic routes
-      onGenerateRoute: _onGenerateRoute,
+      //onGenerateRoute: _onGenerateRoute,
 
       // Builder for custom transitions
       builder: (context, child) {
@@ -76,38 +77,35 @@ class App extends StatelessWidget {
   }
 
   /// Handle dynamic routes with parameters
-  Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
-    switch (settings.name) {
-      case '/post-detail':
-        final postId = settings.arguments as String?;
-        if (postId != null) {
-          return _createRoute(
-            PostDetailScreen(postId: postId),
-            settings,
-          );
-        }
-        break;
-
-      case '/chat':
-        final args = settings.arguments as Map<String, dynamic>?;
-        if (args != null) {
-          return _createRoute(
-            ChatScreen(
-              recipientName: args['recipientName'] ?? 'Unknown',
-              recipientImage: args['recipientImage'] ?? '',
-            ),
-            settings,
-          );
-        }
-        break;
-    }
-
-    // Return 404 page if route not found
-    return _createRoute(
-      const NotFoundScreen(),
-      settings,
-    );
-  }
+  // Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
+  //   switch (settings.name) {
+  //     case '/post-detail':
+  //       final postId = settings.arguments as String?;
+  //       if (postId != null) {
+  //         return _createRoute(
+  //           PostDetailScreen(postId: postId),
+  //           settings,
+  //         );
+  //       }
+  //       break;
+  //
+  //     case '/chat':
+  //       final args = settings.arguments as Map<String, dynamic>?;
+  //       if (args != null) {
+  //         return _createRoute(
+  //           //ChatScreen(conversation: Conversation(id: id, otherUserId: otherUserId, otherUserName: otherUserName, createdAt: createdAt, updatedAt: updatedAt),),
+  //           //settings,
+  //         );
+  //       }
+  //       break;
+  //   }
+  //
+  //   // Return 404 page if route not found
+  //   return _createRoute(
+  //     const NotFoundScreen(),
+  //     settings,
+  //   );
+  // }
 
   /// Create custom page route with fade transition
   PageRoute _createRoute(Widget page, RouteSettings settings) {

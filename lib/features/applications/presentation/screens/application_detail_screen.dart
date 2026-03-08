@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/config/theme/app_colors.dart';
-import '../../../../core/config/theme/app_theme.dart';
 import '../../data/models/application_model.dart';
-import '../../domain/entities/application.dart';
 import '../providers/application_provider.dart';
 import '../widgets/application_status_badge.dart';
 import '../widgets/empty_state.dart';

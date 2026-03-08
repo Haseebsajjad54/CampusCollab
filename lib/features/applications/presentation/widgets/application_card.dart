@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/config/theme/app_colors.dart';
 import '../../data/models/application_model.dart';
-import '../../domain/entities/application.dart';
 import 'application_status_badge.dart';
 
 /// Reusable Application Card Widget

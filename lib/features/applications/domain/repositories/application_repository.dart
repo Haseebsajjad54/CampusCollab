@@ -1,7 +1,6 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../../data/models/application_model.dart';
-import '../entities/application.dart';
 
 /// Application repository interface - Domain layer
 abstract class ApplicationRepository {
