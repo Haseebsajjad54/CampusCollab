@@ -83,6 +83,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       _status = AuthStatus.error;
       _errorMessage = e.toString();
+      print(_errorMessage);
       notifyListeners();
       return false;
     }
@@ -113,7 +114,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> sendPasswordResetEmail(String trim) async {
-    // TODO: Implement password reset via Supabase
+
     return true;
 
   }

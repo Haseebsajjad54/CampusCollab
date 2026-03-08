@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:ui';
 import 'dart:math' as math;
 import '../../../../core/config/theme/app_colors.dart';
+import '../providers/auth_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -61,6 +63,8 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
+    final provider=Provider.of<AuthProvider>(context);
+
 
     return Scaffold(
       body: Stack(
@@ -104,7 +108,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                     const SizedBox(height: 40),
 
                     // Glass card with signup form
-                    _buildSignUpCard(theme),
+                    _buildSignUpCard(theme,provider),
 
                     const SizedBox(height: 24),
 
@@ -172,7 +176,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     );
   }
 
-  Widget _buildSignUpCard(ThemeData theme) {
+  Widget _buildSignUpCard(ThemeData theme,AuthProvider provider) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -324,7 +328,10 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: _isLoading ? null : _handleSignUp,
+                        onTap: ()async{
+                        bool isSuccess= await provider.signUp(email: _emailController.text, password: _passwordController.text, fullName: _fullNameController.text);
+                        print(isSuccess);
+                        },
                         borderRadius: BorderRadius.circular(16),
                         child: Center(
                           child: _isLoading
@@ -422,7 +429,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     );
   }
 
-  void _handleSignUp() async {
+  void _handleSignUp(AuthProvider provider) async {
     setState(() => _isLoading = true);
 
     await Future.delayed(const Duration(seconds: 2)); // simulate API call

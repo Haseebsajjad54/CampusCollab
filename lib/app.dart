@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'core/config/theme/app_theme.dart';
 import 'core/config/theme/app_colors.dart';
 import 'features/applications/presentation/screens/my_applications_screen.dart';
+import 'features/auth/presentation/screens/log_in_or_home_screen.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/posts/presentation/screens/post_feed_screen.dart';
 import 'features/posts/presentation/screens/post_detail_screen.dart';
@@ -44,7 +45,7 @@ class App extends StatelessWidget {
       theme: AppTheme.luxuryTheme,
 
       // Routes
-      initialRoute: '/login',
+      initialRoute: '/',
       routes: _buildRoutes(),
 
       // Route generator for dynamic routes
@@ -66,6 +67,7 @@ class App extends StatelessWidget {
   /// Define all static routes
   Map<String, WidgetBuilder> _buildRoutes() {
     return {
+      '/':(context)=> const LogInOrHomeScreen(),
       '/login': (context) => const LoginScreen(),
       '/home': (context) => const MainScreen(),
       '/profile': (context) => const ProfileScreen(),

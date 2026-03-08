@@ -33,8 +33,8 @@ Future<void> main() async {
     ),
   );
   await Supabase.initialize(
-    url: 'YOUR_SUPABASE_URL',
-    anonKey: 'YOUR_SUPABASE_ANON_KEY',
+    url: 'https://etthzqjdexokgetaivgv.supabase.co',
+    anonKey: 'sb_publishable_iLK6D_NayFsZf_wP6NKyRg_I15R3U3X',
   );
 
   final supabaseClient = Supabase.instance.client;

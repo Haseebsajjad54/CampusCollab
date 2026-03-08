@@ -1,6 +1,8 @@
+import 'package:campus_collab/features/auth/presentation/providers/auth_provider.dart';
 import 'package:campus_collab/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:campus_collab/features/auth/presentation/screens/signup_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:math' as math;
 import '../../../../core/config/theme/app_colors.dart';
 import 'dart:ui';
@@ -58,6 +60,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<AuthProvider>(context);
     final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
 
@@ -103,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     const SizedBox(height: 60),
 
                     // Glass Card with Login Form
-                    _buildLoginCard(theme),
+                    _buildLoginCard(theme,provider),
 
                     const SizedBox(height: 32),
 
@@ -183,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildLoginCard(ThemeData theme) {
+  Widget _buildLoginCard(ThemeData theme, AuthProvider provider) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -261,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 const SizedBox(height: 32),
 
                 // Login Button
-                _buildLoginButton(theme),
+                _buildLoginButton(theme,provider),
               ],
             ),
           ),
@@ -326,7 +329,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildLoginButton(ThemeData theme) {
+  Widget _buildLoginButton(ThemeData theme,AuthProvider provider) {
     return SizedBox(
       width: double.infinity,
       height: 60,
@@ -347,7 +350,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: _isLoading ? null : _handleLogin,
+            onTap:() async {
+            bool isSuccess= await provider.signIn(email: _emailController.text, password: _passwordController.text);
+            print(isSuccess);
+            },
             borderRadius: BorderRadius.circular(16),
             child: Center(
               child: _isLoading
