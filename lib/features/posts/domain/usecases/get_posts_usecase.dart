@@ -14,7 +14,7 @@ class GetPostUseCase{
 
   }
 
-  Future<Either<Failure, List<Post>>> getAllPosts() {
+  Future<Either<Failure, List<Map<String, dynamic>>>> getAllPosts() {
     return repository.getPosts();
 
   }

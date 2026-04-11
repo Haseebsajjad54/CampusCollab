@@ -1,12 +1,12 @@
+// lib/features/notifications/presentation/providers/notification_provider.dart
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' hide Notification;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/repositories/notification_repository_impl.dart';
 import '../../domain/entities/notification.dart';
 import '../../domain/usecases/get_notifications_usecase.dart';
 import '../../domain/usecases/mark_notification_read_usecase.dart';
 
-/// Notification State Status
 enum NotificationStatus {
   initial,
   loading,
@@ -14,18 +14,19 @@ enum NotificationStatus {
   error,
 }
 
-/// Notification State
 class NotificationState {
   final NotificationStatus status;
   final List<Notification> notifications;
   final int unreadCount;
   final String? errorMessage;
+  final bool showNotificationMenu;
 
   NotificationState({
     required this.status,
     required this.notifications,
     this.unreadCount = 0,
     this.errorMessage,
+    this.showNotificationMenu = false,
   });
 
   factory NotificationState.initial() {
@@ -33,6 +34,7 @@ class NotificationState {
       status: NotificationStatus.initial,
       notifications: [],
       unreadCount: 0,
+      showNotificationMenu: false,
     );
   }
 
@@ -41,12 +43,14 @@ class NotificationState {
     List<Notification>? notifications,
     int? unreadCount,
     String? errorMessage,
+    bool? showNotificationMenu,
   }) {
     return NotificationState(
       status: status ?? this.status,
       notifications: notifications ?? this.notifications,
       unreadCount: unreadCount ?? this.unreadCount,
       errorMessage: errorMessage,
+      showNotificationMenu: showNotificationMenu ?? this.showNotificationMenu,
     );
   }
 
@@ -55,9 +59,6 @@ class NotificationState {
   bool get hasUnread => unreadCount > 0;
 }
 
-/// Notification Provider
-///
-/// Manages notifications with real-time updates
 class NotificationProvider extends ChangeNotifier {
   late final GetNotificationsUseCase _getNotificationsUseCase;
   late final MarkNotificationReadUseCase _markReadUseCase;
@@ -71,6 +72,7 @@ class NotificationProvider extends ChangeNotifier {
   bool get isLoading => _state.isLoading;
   bool get hasError => _state.hasError;
   String? get errorMessage => _state.errorMessage;
+  bool get showNotificationMenu => _state.showNotificationMenu;
 
   StreamSubscription<Notification>? _realtimeSubscription;
 
@@ -86,14 +88,11 @@ class NotificationProvider extends ChangeNotifier {
     _markReadUseCase = MarkNotificationReadUseCase(_repository);
   }
 
-  /// Setup real-time listener
   void _setupRealtimeListener() {
     try {
       final stream = _repository.listenToNotifications();
-
       _realtimeSubscription = stream.listen(
             (notification) {
-          // Add new notification to list
           _state = _state.copyWith(
             notifications: [notification, ..._state.notifications],
             unreadCount: _state.unreadCount + 1,
@@ -109,29 +108,28 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
-  /// Load notifications
-  Future<void> loadNotifications({
-    int limit = 50,
-    int offset = 0,
-    bool unreadOnly = false,
-  }) async {
+  Future<void> loadNotifications() async {
+    if (_state.isLoading) return;
+
     _state = _state.copyWith(status: NotificationStatus.loading);
     notifyListeners();
 
-    final result = await _getNotificationsUseCase.call();
+    final result = await _getNotificationsUseCase.getUnreadNotifications();
 
-    result.fold(
-          (failure) {
-        _state = NotificationState(
+    await result.fold(
+          (failure) async {
+        _state = _state.copyWith(
           status: NotificationStatus.error,
-          notifications: [],
           errorMessage: failure.message,
         );
       },
           (notifications) async {
-        // Also load unread count
         final countResult = await _getNotificationsUseCase.getUnreadCount();
-        final count = countResult.getOrElse(() => 0);
+        int count = 0;
+        countResult.fold(
+              (failure) {},
+              (c) => count = c,
+        );
 
         _state = NotificationState(
           status: NotificationStatus.success,
@@ -143,12 +141,33 @@ class NotificationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Refresh notifications
-  Future<void> refreshNotifications() async {
-    await loadNotifications();
+  Future<void> loadAllNotifications() async {
+    if (_state.isLoading) return;
+
+    _state = _state.copyWith(status: NotificationStatus.loading);
+    notifyListeners();
+
+    final result = await _getNotificationsUseCase.getNotifications();
+
+    result.fold(
+          (failure) {
+        _state = _state.copyWith(
+          status: NotificationStatus.error,
+          errorMessage: failure.message,
+        );
+      },
+          (notifications) {
+        final unreadCount = notifications.where((n) => !n.isRead).length;
+        _state = NotificationState(
+          status: NotificationStatus.success,
+          notifications: notifications,
+          unreadCount: unreadCount,
+        );
+      },
+    );
+    notifyListeners();
   }
 
-  /// Mark notification as read
   Future<bool> markAsRead(String notificationId) async {
     final result = await _markReadUseCase(notificationId);
 
@@ -159,7 +178,6 @@ class NotificationProvider extends ChangeNotifier {
         return false;
       },
           (_) {
-        // Update local state
         final updatedNotifications = _state.notifications.map((n) {
           if (n.id == notificationId && !n.isRead) {
             return n.copyWith(isRead: true);
@@ -177,7 +195,6 @@ class NotificationProvider extends ChangeNotifier {
     );
   }
 
-  /// Mark all as read
   Future<bool> markAllAsRead() async {
     final result = await _markReadUseCase.markAllAsRead();
 
@@ -188,7 +205,6 @@ class NotificationProvider extends ChangeNotifier {
         return false;
       },
           (_) {
-        // Update local state
         final updatedNotifications = _state.notifications
             .map((n) => n.copyWith(isRead: true))
             .toList();
@@ -203,70 +219,28 @@ class NotificationProvider extends ChangeNotifier {
     );
   }
 
-  /// Delete notification
-  Future<bool> deleteNotification(String notificationId) async {
-    final result = await _markReadUseCase.deleteNotification(notificationId);
-
-    return result.fold(
-          (failure) {
-        _state = _state.copyWith(errorMessage: failure.message);
-        notifyListeners();
-        return false;
-      },
-          (_) {
-        // Remove from local state
-        final wasUnread = _state.notifications
-            .firstWhere((n) => n.id == notificationId)
-            .isRead == false;
-
-        final updatedNotifications = _state.notifications
-            .where((n) => n.id != notificationId)
-            .toList();
-
-        _state = _state.copyWith(
-          notifications: updatedNotifications,
-          unreadCount: wasUnread ? _state.unreadCount - 1 : _state.unreadCount,
-        );
-        notifyListeners();
-        return true;
-      },
-    );
-  }
-
-  /// Clear all notifications
-  Future<bool> clearAll() async {
-    final result = await _markReadUseCase.clearAll();
-
-    return result.fold(
-          (failure) {
-        _state = _state.copyWith(errorMessage: failure.message);
-        notifyListeners();
-        return false;
-      },
-          (_) {
-        _state = NotificationState.initial();
-        notifyListeners();
-        return true;
-      },
-    );
-  }
-
-  /// Get unread notifications
   List<Notification> getUnreadNotifications() {
     return _state.notifications.where((n) => !n.isRead).toList();
   }
 
-  /// Get notifications by type
-  List<Notification> getNotificationsByType(NotificationType type) {
-    return _state.notifications.where((n) => n.type == type).toList();
+  List<Notification> getRecentNotifications({int limit = 3}) {
+    return _state.notifications.take(limit).toList();
   }
 
-  /// Get today's notifications
-  List<Notification> getTodaysNotifications() {
-    return _state.notifications.where((n) => n.isToday).toList();
+  void toggleNotificationMenu() {
+    _state = _state.copyWith(
+      showNotificationMenu: !_state.showNotificationMenu,
+    );
+    notifyListeners();
   }
 
-  /// Clear error
+  void closeNotificationMenu() {
+    if (_state.showNotificationMenu) {
+      _state = _state.copyWith(showNotificationMenu: false);
+      notifyListeners();
+    }
+  }
+
   void clearError() {
     _state = _state.copyWith(errorMessage: null);
     notifyListeners();

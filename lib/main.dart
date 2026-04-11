@@ -1,5 +1,10 @@
+import 'package:campus_collab/features/matching/presentation/providers/matching_provider.dart';
+import 'package:campus_collab/features/notifications/presentation/providers/notification_provider.dart';
+import 'package:campus_collab/features/posts/data/repositories/post_repository_impl.dart';
+import 'package:campus_collab/features/posts/presentation/providers/post_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -16,11 +21,19 @@ import 'features/auth/domain/usecases/logout_usecase.dart';
 import 'features/auth/domain/usecases/signup_usecase.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
 import 'features/matching/presentation/screens/matches_screen.dart';
-import 'features/notifications/presentation/screens/notifications_screen.dart';
+import 'features/messaging/presentation/providers/messaging_provider.dart';
+import 'features/notifications/presentation/providers/connection_provider.dart';
+import 'features/notifications/presentation/screens/requests_alert_screen.dart';
+import 'features/posts/data/datasources/post_remote_datasource.dart';
 import 'features/posts/presentation/screens/post_feed_screen.dart';
+import 'features/profile/presentation/providers/profile_provider.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
 
 Future<void> main() async {
+  await dotenv.load(fileName: ".env");
+
+  String apiKey = dotenv.env['API_KEY']!;
+  String baseUrl = dotenv.env['BASE_URL']!;
   WidgetsFlutterBinding.ensureInitialized();
 
   // Set system UI overlay style
@@ -33,8 +46,8 @@ Future<void> main() async {
     ),
   );
   await Supabase.initialize(
-    url: 'https://etthzqjdexokgetaivgv.supabase.co',
-    anonKey: 'sb_publishable_iLK6D_NayFsZf_wP6NKyRg_I15R3U3X',
+    url: baseUrl,
+    anonKey: apiKey,
   );
 
   final supabaseClient = Supabase.instance.client;
@@ -42,6 +55,10 @@ Future<void> main() async {
   // Remote Data Source
   final authRemoteDataSource = AuthRemoteDataSourceImpl(supabaseClient);
   final authLocalDataSource = AuthLocalDataSourceImpl();
+  final PostRemoteDataSourceImpl dataSource = PostRemoteDataSourceImpl(supabaseClient);
+  final postRepo=PostRepositoryImpl(dataSource);
+
+
 
 
   // Repository
@@ -60,12 +77,26 @@ Future<void> main() async {
             signUpUseCase: signUpUseCase,
             signInUseCase: signInUseCase,
             signOutUseCase: signOutUseCase,
-          ),
+            client: supabaseClient,
+            authLocalDataSource: authLocalDataSource,
+          )..checkAuthStatus(),
         ),
 
         // You can add more providers here, e.g., ApplicationProvider
         ChangeNotifierProvider(create: (_) => ApplicationProvider()),
-        // ChangeNotifierProvider(create: (_)=>MatchesProvider()),)
+        ChangeNotifierProvider(create: (_) => MessagingProvider()),
+        ChangeNotifierProvider(create: (_)=>MatchingProvider()),
+        ChangeNotifierProvider(create: (_)=>NotificationProvider()..loadNotifications()),
+        ChangeNotifierProvider(create: (_)=>ConnectionProvider()),
+        ChangeNotifierProvider(
+          create: (context) => ProfileProvider()..loadCurrentProfile()),
+        ChangeNotifierProvider(
+          create: (context) => PostProvider(
+            postRepo,
+            Supabase.instance.client,
+          )..getPosts(), // auto fetch
+          child: const PostFeedScreen(),
+        ),
       ],
       child: const App(),
     ),
@@ -103,7 +134,7 @@ class _MainScreenState extends State<MainScreen>
     const PostFeedScreen(),
     const MatchesScreen(),
     const ConversationsScreen(),
-    const NotificationsScreen(),
+    const RequestAlertScreen(),
     const ProfileScreen(),
   ];
 

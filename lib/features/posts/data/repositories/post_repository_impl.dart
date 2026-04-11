@@ -5,70 +5,54 @@ import 'package:dartz/dartz.dart';
 
 import '../datasources/post_remote_datasource.dart';
 
-class PostRepositoryImpl extends PostRepository{
+class PostRepositoryImpl extends PostRepository {
   final PostRemoteDataSource dataSource;
 
   PostRepositoryImpl(this.dataSource);
 
   @override
-  Future<Either<Failure, Post>> createPost(Post post) async{
-try{
-  return Right(dataSource.createPost(post) as Post);
-
-}catch(e){
-  return Left(ServerFailure(e.toString()));
-}
+  Future<Either<Failure, Post>> createPost(Post post) async {
+    return await dataSource.createPost(post);
   }
 
   @override
   Future<Either<Failure, void>> deletePost(String postId) async {
-    try{
-      dataSource.deletePost(postId);
-      return const Right(null);
-    }catch(e){
-      return Left(ServerFailure(e.toString()));
-    }
+    return await dataSource.deletePost(postId);
   }
 
   @override
   Future<Either<Failure, Post>> editPost(Post post) async {
-    try{
-      return Right(dataSource.editPost(post) as Post);
-    }catch(e){
-      return Left(ServerFailure(e.toString()));
-    }
+    return await dataSource.editPost(post);
   }
 
   @override
-  Future<Either<Failure, List<Post>>> filterPosts(String filter) {
-    // TODO: implement filterPosts
-    throw UnimplementedError();
+  Future<Either<Failure, List<Post>>> filterPosts(String filter) async {
+    return await dataSource.filterPosts(filter);
   }
 
   @override
   Future<Either<Failure, Post>> getPost(String postId) async {
-    try{
-      return Right(dataSource.getPost(postId) as Post);
-      }catch(e){
-      return Left(ServerFailure(e.toString()));
-    }
+    return await dataSource.getPost(postId);
   }
 
   @override
-  Future<Either<Failure, List<Post>>> getPosts() async{
-    try{
-      return Right(dataSource.getPosts() as List<Post>);
-    }catch(e){
-      return Left(ServerFailure(e.toString()));
+  Future<Map<String, dynamic>?> fetchPostById(String postId) async {
+    return await dataSource.fetchPostById(postId);
+  }
 
-    }
+
+  @override
+  Future<Either<Failure, List<Map<String, dynamic>>>> getPosts() async {
+    return await dataSource.getPosts();
   }
 
   @override
-  Future<Either<Failure, List<Post>>> searchPosts(String query) {
-    // TODO: implement searchPosts
-    throw UnimplementedError();
+  Future<Either<Failure, List<Post>>> searchPosts(String query) async {
+    return await dataSource.searchPosts(query);
   }
 
-
+  @override
+  Future<List<String>> skills()async {
+    return await dataSource.getSkills();
+  }
 }

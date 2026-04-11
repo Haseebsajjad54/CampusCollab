@@ -6,6 +6,7 @@ abstract class AuthLocalDataSource {
   Future<void> cacheUser(UserModel user);
   Future<UserModel?> getCachedUser();
   Future<void> clearUser();
+
 }
 
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
@@ -34,4 +35,6 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_cachedUserKey);
   }
+
+
 }

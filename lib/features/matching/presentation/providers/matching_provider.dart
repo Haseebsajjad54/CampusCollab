@@ -1,5 +1,8 @@
+import 'package:campus_collab/features/matching/domain/usecases/manage_connections_use_case.dart';
+import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/errors/failures.dart';
 import '../../data/repositories/matching_repository_impl.dart';
 import '../../domain/entities/match_suggestion.dart';
 import '../../domain/usecases/get_match_suggestions_usecase.dart';
@@ -55,6 +58,7 @@ class MatchingState {
 /// Manages match suggestions state and operations
 class MatchingProvider extends ChangeNotifier {
   late final GetMatchSuggestionsUseCase _getMatchSuggestionsUseCase;
+  late final ManageConnectionUseCase _manageConnectionUseCase;
 
   MatchingState _state = MatchingState.initial();
   MatchingState get state => _state;
@@ -65,6 +69,7 @@ class MatchingProvider extends ChangeNotifier {
   bool get hasError => _state.hasError;
   bool get isEmpty => _state.isEmpty;
   String? get errorMessage => _state.errorMessage;
+  late final currentUserId;
 
   MatchingProvider() {
     _initializeUseCase();
@@ -73,8 +78,10 @@ class MatchingProvider extends ChangeNotifier {
   /// Initialize use case with Supabase
   void _initializeUseCase() {
     final supabase = Supabase.instance.client;
+    currentUserId = supabase.auth.currentUser?.id;
     final repository = MatchingRepositoryImpl(supabaseClient: supabase);
     _getMatchSuggestionsUseCase = GetMatchSuggestionsUseCase(repository);
+    _manageConnectionUseCase = ManageConnectionUseCase(repository);
   }
 
   /// Load match suggestions
@@ -326,4 +333,48 @@ class MatchingProvider extends ChangeNotifier {
     _state = MatchingState.initial();
     notifyListeners();
   }
+
+  /// send Connection usecase
+
+  Future<void> sendConnectionRequest(String senderId, String receiverId) async {
+    print("Sender ID: $senderId, Receiver ID: $receiverId");
+    final response = await _manageConnectionUseCase.sendConnectionRequest(senderId, receiverId);
+    print("Response: $response");
+
+
+    response.fold(
+          (failure) {
+        print("Failure: ${failure.message}");
+        // Optionally show error to user
+      },
+          (success) {
+        if (success) {
+          print("Success: Connection request sent");
+        } else {
+          print("Already sent");
+        }
+      },
+    );
+  }
+
+  ///Accept Connection Request
+  Future<void> acceptConnectionRequest(String userId, String requesterId)async {
+    final response=await _manageConnectionUseCase.acceptConnectionRequest(userId, requesterId);
+
+    response.fold(
+          (failure) {
+        print("Failure: ${failure.message}");
+        // Optionally show error to user
+      },
+          (success) {
+        if (success) {
+          print("Success: Connection request accepted");
+        } else {
+          print("Already sent");
+        }
+      },
+    );
+
+  }
+
 }

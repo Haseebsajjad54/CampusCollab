@@ -15,7 +15,7 @@ abstract class PostRepository{
 
 
   //Get Posts
-  Future<Either<Failure, List<Post>>> getPosts();
+  Future<Either<Failure, List<Map<String, dynamic>>>> getPosts();
 
 
   // Search posts
@@ -29,6 +29,9 @@ abstract class PostRepository{
 
   // Get Post
   Future<Either<Failure, Post>> getPost(String postId);
+
+  Future<Map<String, dynamic>?> fetchPostById(String postId);
+  Future<List<String>> skills();
 
 
   // Get Post Comments

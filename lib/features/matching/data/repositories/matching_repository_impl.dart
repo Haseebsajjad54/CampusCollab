@@ -137,10 +137,7 @@ class MatchingRepositoryImpl implements MatchingRepository {
   }
 
   /// Calculate match score between two users
-  Future<Map<String, dynamic>> _calculateMatchScore(
-      Map<String, dynamic> currentUser,
-      Map<String, dynamic> otherUser,
-      ) async {
+  Future<Map<String, dynamic>> _calculateMatchScore(Map<String, dynamic> currentUser, Map<String, dynamic> otherUser,) async {
     double totalScore = 0.0;
     final reasons = <String, dynamic>{};
 
@@ -264,5 +261,85 @@ class MatchingRepositoryImpl implements MatchingRepository {
       'score': totalScore,
       'model': model,
     };
+  }
+
+  @override
+  Future<Either<Failure, bool>> sendConnectionRequest(String senderId, String receiverId) async {
+    try {
+      print("Sender ID: $senderId, Receiver ID: $receiverId");
+
+      // Call the RPC function instead of direct update
+      final response = await supabaseClient.rpc('send_connection_request', params: {
+        'p_receiver_id': receiverId,
+        'p_sender_id': senderId,
+      });
+
+      print("RPC Response: $response");
+
+      final success = response['success'] as bool;
+      return Right(success);
+
+    } catch (e) {
+      print("Error: $e");
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> acceptConnectionRequest(String userId, String requesterId) async{
+    try {
+      // Get current data
+      final profileData = await supabaseClient
+          .from('profiles')
+          .select('connections_requests, connections')
+          .eq('id', userId)
+          .single();
+
+      // Remove from connection_requests
+      List<dynamic> requests = profileData['connections_requests'] ?? [];
+      requests.remove(requesterId);
+
+      // Add to connections array
+      List<dynamic> connections = profileData['connections'] ?? [];
+      if (!connections.contains(requesterId)) {
+        connections.add(requesterId);
+      }
+
+      // Update both arrays
+      await supabaseClient
+          .from('profiles')
+          .update({
+        'connections_requests': requests,
+        'connections': connections,
+        'updated_at': DateTime.now().toIso8601String(),
+      })
+          .eq('id', userId);
+
+      // Also add to requester's connections
+      final requesterData = await supabaseClient
+          .from('profiles')
+          .select('connections')
+          .eq('id', requesterId)
+          .single();
+
+      List<dynamic> requesterConnections = requesterData['connections'] ?? [];
+      if (!requesterConnections.contains(userId)) {
+        requesterConnections.add(userId);
+      }
+
+      await supabaseClient
+          .from('profiles')
+          .update({
+        'connections': requesterConnections,
+        'updated_at': DateTime.now().toIso8601String(),
+      })
+          .eq('id', requesterId);
+
+      return const Right(true);
+
+    } catch (e) {
+      print(e);
+      return Left(ServerFailure(e.toString()));
+    }
   }
 }

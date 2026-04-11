@@ -1,169 +1,195 @@
+import 'dart:ui';
+import 'package:campus_collab/features/posts/presentation/widgets/customs_text_field.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/config/theme/app_colors.dart';
+import '../providers/post_provider.dart';
+import 'package:provider/provider.dart';
 
-class CreatePostScreen extends StatefulWidget {
-  const CreatePostScreen({super.key});
+/// Show Create Post Bottom Sheet
+/// Call this function when FAB is pressed
+void showCreatePostSheet(BuildContext context) {
+  // Reset provider state
+  context.read<PostProvider>().resetForm();
 
-  @override
-  State<CreatePostScreen> createState() => _CreatePostScreenState();
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    isDismissible: true,
+    enableDrag: true,
+    builder: (context) => const CreatePostBottomSheet(),
+  );
 }
 
-class _CreatePostScreenState extends State<CreatePostScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _stepController;
-  late PageController _pageController;
 
-  int _currentStep = 0;
-  final int _totalSteps = 4;
-
-  // Form Controllers
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  String _postType = 'FYP Group';
-  int _teamSize = 3;
-  DateTime? _deadline;
-  final List<String> _selectedSkills = [];
-  final List<String> _tags = [];
+class CreatePostBottomSheet extends StatefulWidget {
+  const CreatePostBottomSheet({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    _stepController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _pageController = PageController();
-  }
+  State<CreatePostBottomSheet> createState() => _CreatePostBottomSheetState();
+}
+
+class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
+  final PageController _pageController = PageController();
 
   @override
   void dispose() {
-    _stepController.dispose();
     _pageController.dispose();
-    _titleController.dispose();
-    _descriptionController.dispose();
     super.dispose();
-  }
-
-  void _nextStep() {
-    if (_currentStep < _totalSteps - 1) {
-      setState(() => _currentStep++);
-      _pageController.animateToPage(
-        _currentStep,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOutCubic,
-      );
-    }
-  }
-
-  void _previousStep() {
-    if (_currentStep > 0) {
-      setState(() => _currentStep--);
-      _pageController.animateToPage(
-        _currentStep,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOutCubic,
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final size = MediaQuery.of(context).size;
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          // Animated Background
-          _buildAnimatedBackground(),
-
-          // Main Content
-          SafeArea(
-            child: Column(
-              children: [
-                // Header
-                _buildHeader(theme),
-
-                // Progress Indicator
-                _buildProgressIndicator(theme),
-
-                // Content Pages
-                Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      _buildBasicInfoStep(theme),
-                      _buildDetailsStep(theme),
-                      _buildSkillsStep(theme),
-                      _buildReviewStep(theme),
-                    ],
-                  ),
-                ),
-
-                // Navigation Buttons
-                _buildNavigationButtons(theme),
-              ],
+    return Consumer<PostProvider>(
+      builder: (context, provider, _) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.90,
+          decoration: const BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(24),
             ),
           ),
-        ],
+          child: Stack(
+            children: [
+              // Animated Background
+              _buildAnimatedBackground(),
+
+              // Main Content
+              Column(
+                children: [
+                  // Drag Handle
+                  _buildDragHandle(),
+
+                  // Header
+                  _buildHeader(context, provider),
+
+                  // Progress Indicator
+                  _buildProgressIndicator(provider),
+
+                  // Steps Content
+                  Expanded(
+                    child: PageView(
+                      controller: _pageController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      onPageChanged: (index) {
+                        // Sync page with provider step
+                      },
+                      children: [
+                        _buildBasicInfoStep(context, provider),
+                        _buildDetailsStep(context, provider),
+                        _buildSkillsStep(context, provider),
+                        _buildLookingForStep(context, provider),
+                        _buildReviewStep(context, provider),
+                      ],
+                    ),
+                  ),
+
+                  // Navigation Buttons
+                  _buildNavigationButtons(context, provider),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ============================================================================
+  // DRAG HANDLE
+  // ============================================================================
+
+  Widget _buildDragHandle() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: Container(
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: AppColors.border,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
       ),
     );
   }
+
+  // ============================================================================
+  // ANIMATED BACKGROUND
+  // ============================================================================
 
   Widget _buildAnimatedBackground() {
     return Positioned.fill(
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.0, end: 1.0),
-        duration: const Duration(seconds: 2),
-        builder: (context, value, child) {
-          return CustomPaint(
-            painter: WavePainter(value),
-          );
-        },
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(seconds: 2),
+          builder: (context, value, child) {
+            return CustomPaint(
+              painter: WavePainter(value),
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildHeader(ThemeData theme) {
+  // ============================================================================
+  // HEADER
+  // ============================================================================
+
+  Widget _buildHeader(BuildContext context, PostProvider provider) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: Row(
         children: [
+          // Close Button
           Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: AppColors.border,
                 width: 1,
               ),
             ),
             child: IconButton(
-              icon: const Icon(Icons.close, color: AppColors.textPrimary),
+              icon: const Icon(Icons.close, size: 20),
+              color: AppColors.textPrimary,
               onPressed: () => Navigator.pop(context),
-              iconSize: 20,
+              padding: EdgeInsets.zero,
             ),
           ),
+
           const SizedBox(width: 16),
+
+          // Title & Step Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Create New Post',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontSize: 24,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  'Step ${_currentStep + 1} of $_totalSteps',
+                  'Step ${provider.currentStep + 1} of ${provider.totalSteps}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppColors.textSecondary,
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -174,28 +200,30 @@ class _CreatePostScreenState extends State<CreatePostScreen>
     );
   }
 
-  Widget _buildProgressIndicator(ThemeData theme) {
+  // ============================================================================
+  // PROGRESS INDICATOR
+  // ============================================================================
+
+  Widget _buildProgressIndicator(PostProvider provider) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
-        children: List.generate(_totalSteps, (index) {
-          final isCompleted = index < _currentStep;
-          final isCurrent = index == _currentStep;
+        children: List.generate(provider.totalSteps, (index) {
+          final isCompleted = index < provider.currentStep;
+          final isCurrent = index == provider.currentStep;
 
           return Expanded(
             child: Container(
               height: 4,
               margin: EdgeInsets.only(
-                right: index < _totalSteps - 1 ? 8 : 0,
+                right: index < provider.totalSteps - 1 ? 8 : 0,
               ),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(2),
                 gradient: isCompleted || isCurrent
                     ? AppColors.accentGradient
                     : null,
-                color: isCompleted || isCurrent
-                    ? null
-                    : AppColors.surface,
+                color: isCompleted || isCurrent ? null : AppColors.surface,
               ),
             ),
           );
@@ -204,8 +232,12 @@ class _CreatePostScreenState extends State<CreatePostScreen>
     );
   }
 
-  // Step 1: Basic Info
-  Widget _buildBasicInfoStep(ThemeData theme) {
+  // ============================================================================
+  // STEP 1: BASIC INFO
+  // ============================================================================
+
+  Widget _buildBasicInfoStep(BuildContext context, PostProvider provider) {
+    final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -216,18 +248,17 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             title: 'Basic Information',
             subtitle: 'Let\'s start with the fundamentals',
           ),
+          const SizedBox(height: 24),
 
-          const SizedBox(height: 32),
-
-          // Post Type Selection
+          // Post Type
           Text(
             'POST TYPE',
             style: theme.textTheme.labelSmall?.copyWith(
               color: AppColors.textSecondary,
+              letterSpacing: 1,
             ),
           ),
           const SizedBox(height: 12),
-
           Row(
             children: [
               Expanded(
@@ -235,8 +266,8 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                   theme: theme,
                   type: 'FYP Group',
                   icon: Icons.groups_outlined,
-                  isSelected: _postType == 'FYP Group',
-                  onTap: () => setState(() => _postType = 'FYP Group'),
+                  isSelected: provider.postType == 'FYP Group',
+                  onTap: () => provider.setPostType('FYP Group'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -245,39 +276,51 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                   theme: theme,
                   type: 'Project Partner',
                   icon: Icons.handshake_outlined,
-                  isSelected: _postType == 'Project Partner',
-                  onTap: () => setState(() => _postType = 'Project Partner'),
+                  isSelected: provider.postType == 'academic_project',
+                  onTap: () => provider.setPostType('academic_project'),
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 32),
-
-          // Title Input
-          _buildTextField(
-            controller: _titleController,
-            label: 'PROJECT TITLE',
-            hint: 'e.g., AI-Powered Health Monitoring System',
-            maxLines: 1,
-          ),
-
           const SizedBox(height: 24),
 
-          // Description Input
-          _buildTextField(
-            controller: _descriptionController,
-            label: 'DESCRIPTION',
-            hint: 'Describe your project idea, goals, and what you\'re looking for...',
-            maxLines: 6,
+          // Project Title
+          CustomTextField(
+              label: 'PROJECT TITLE',
+              hint: 'e.g., AI-Powered Health Monitoring System',
+              onChanged: provider.setTitle
           ),
+
+
+          const SizedBox(height: 20),
+
+          // Description
+          CustomTextField(
+              label: 'DESCRIPTION',
+              hint: 'Describe your project idea, goals, and what you\'re looking for',
+              onChanged: provider.setDescription
+          ),
+          // _buildTextField(
+          //   label: 'DESCRIPTION',
+          //   hint: 'Describe your project idea, goals, and what you\'re looking for...',
+          //   maxLines: 5,
+          //   initialValue: provider.description,
+          //   onChanged: provider.setDescription,
+          // ),
+
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  // Step 2: Details
-  Widget _buildDetailsStep(ThemeData theme) {
+  // ============================================================================
+  // STEP 2: DETAILS
+  // ============================================================================
+
+  Widget _buildDetailsStep(BuildContext context, PostProvider provider) {
+    final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -288,18 +331,17 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             title: 'Project Details',
             subtitle: 'Configure team size and timeline',
           ),
+          const SizedBox(height: 24),
 
-          const SizedBox(height: 32),
-
-          // Team Size Selector
+          // Team Size
           Text(
             'TEAM SIZE',
             style: theme.textTheme.labelSmall?.copyWith(
               color: AppColors.textSecondary,
+              letterSpacing: 1,
             ),
           ),
           const SizedBox(height: 12),
-
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -318,7 +360,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Looking for $_teamSize members',
+                      'Looking for ${provider.teamSize} members',
                       style: theme.textTheme.titleMedium,
                     ),
                     Container(
@@ -331,7 +373,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '$_teamSize',
+                        '${provider.teamSize}',
                         style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.w700,
@@ -342,42 +384,30 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                   ],
                 ),
                 const SizedBox(height: 16),
-                SliderTheme(
-                  data: SliderThemeData(
-                    activeTrackColor: AppColors.primary,
-                    inactiveTrackColor: AppColors.background,
-                    thumbColor: AppColors.accent,
-                    overlayColor: AppColors.accent.withOpacity(0.2),
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 12,
-                    ),
-                    trackHeight: 6,
-                  ),
-                  child: Slider(
-                    value: _teamSize.toDouble(),
-                    min: 1,
-                    max: 10,
-                    divisions: 9,
-                    onChanged: (value) {
-                      setState(() => _teamSize = value.toInt());
-                    },
-                  ),
+                Slider(
+                  value: provider.teamSize.toDouble(),
+                  min: 1,
+                  max: 10,
+                  divisions: 9,
+                  activeColor: AppColors.primary,
+                  inactiveColor: AppColors.background,
+                  onChanged: (val) => provider.setTeamSize(val.toInt()),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
-          // Deadline Picker
+          // Deadline
           Text(
             'DEADLINE',
             style: theme.textTheme.labelSmall?.copyWith(
               color: AppColors.textSecondary,
+              letterSpacing: 1,
             ),
           ),
           const SizedBox(height: 12),
-
           InkWell(
             onTap: () async {
               final picked = await showDatePicker(
@@ -385,21 +415,8 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                 initialDate: DateTime.now().add(const Duration(days: 30)),
                 firstDate: DateTime.now(),
                 lastDate: DateTime.now().add(const Duration(days: 365)),
-                builder: (context, child) {
-                  return Theme(
-                    data: ThemeData.dark().copyWith(
-                      colorScheme: const ColorScheme.dark(
-                        primary: AppColors.primary,
-                        surface: AppColors.surface,
-                      ),
-                    ),
-                    child: child!,
-                  );
-                },
               );
-              if (picked != null) {
-                setState(() => _deadline = picked);
-              }
+              if (picked != null) provider.setDeadline(picked);
             },
             child: Container(
               padding: const EdgeInsets.all(20),
@@ -425,22 +442,10 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _deadline != null
-                              ? '${_deadline!.day}/${_deadline!.month}/${_deadline!.year}'
-                              : 'Select deadline',
-                          style: theme.textTheme.titleMedium,
-                        ),
-                        Text(
-                          'Application deadline',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      provider.deadline != null
+                          ? '${provider.deadline!.day}/${provider.deadline!.month}/${provider.deadline!.year}'
+                          : 'Select deadline',
                     ),
                   ),
                   const Icon(
@@ -451,18 +456,19 @@ class _CreatePostScreenState extends State<CreatePostScreen>
               ),
             ),
           ),
+
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  // Step 3: Skills
-  Widget _buildSkillsStep(ThemeData theme) {
-    final availableSkills = [
-      'Python', 'JavaScript', 'React', 'Flutter', 'Node.js',
-      'TensorFlow', 'AWS', 'Docker', 'MongoDB', 'PostgreSQL',
-      'UI/UX', 'Figma', 'Git', 'Machine Learning', 'Blockchain'
-    ];
+  // ============================================================================
+  // STEP 3: SKILLS
+  // ============================================================================
+
+  Widget _buildSkillsStep(BuildContext context, PostProvider provider) {
+    final theme = Theme.of(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -474,57 +480,271 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             title: 'Required Skills',
             subtitle: 'What skills are you looking for?',
           ),
-
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           Text(
-            'SKILLS (${_selectedSkills.length} selected)',
+            'SKILLS (${provider.selectedSkills.length} selected)',
             style: theme.textTheme.labelSmall?.copyWith(
               color: AppColors.textSecondary,
+              letterSpacing: 1,
             ),
           ),
           const SizedBox(height: 16),
 
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: availableSkills.map((skill) {
-              final isSelected = _selectedSkills.contains(skill);
+          // Use FutureBuilder to handle async skills data
+          FutureBuilder<List<String>>(
+            future: provider.getSkills(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+                  ),
+                );
+              }
 
-              return FilterChip(
-                label: Text(skill),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      _selectedSkills.add(skill);
-                    } else {
-                      _selectedSkills.remove(skill);
-                    }
-                  });
-                },
-                backgroundColor: AppColors.surface,
-                selectedColor: AppColors.primary.withOpacity(0.2),
-                checkmarkColor: AppColors.primary,
-                side: BorderSide(
-                  color: isSelected ? AppColors.primary : AppColors.border,
-                  width: 1,
-                ),
-                labelStyle: TextStyle(
-                  color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: AppColors.error,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Failed to load skills',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppColors.error,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () => provider.getSkills(),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final skills = snapshot.data ?? [];
+
+              if (skills.isEmpty) {
+                return Center(
+                  child: Text(
+                    'No skills available',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                );
+              }
+
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: skills.map((skill) {
+                  final selected = provider.selectedSkills.contains(skill);
+                  return FilterChip(
+                    label: Text(skill),
+                    selected: selected,
+                    onSelected: (_) => _handleSkillSelection(context, provider, skill, selected),
+                    backgroundColor: AppColors.surface,
+                    selectedColor: AppColors.primary.withOpacity(0.2),
+                    checkmarkColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: selected ? AppColors.primary : AppColors.border,
+                      ),
+                    ),
+                  );
+                }).toList(),
               );
-            }).toList(),
+            },
+          ),
+
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+// Add this method to handle skill selection with mandatory/optional dialog
+  void _handleSkillSelection(BuildContext context, PostProvider provider, String skill, bool isCurrentlySelected) async {
+    if (isCurrentlySelected) {
+      provider.toggleSkill(skill);
+    } else {
+      final isMandatory = await _showSkillRequirementDialog(context, skill);
+      if (isMandatory != null) {
+        provider.addSkillWithRequirement(skill, isMandatory);
+      }
+    }
+  }
+
+  Future<bool?> _showSkillRequirementDialog(BuildContext context, String skill) async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: AppColors.border),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: AppColors.accentGradient,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.code,
+                color: AppColors.textPrimary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                skill,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Is this skill required for the project?',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                children: [
+                  _buildRequirementOption(
+                    context: context,
+                    title: 'Required',
+                    description: 'Team members must have this skill',
+                    icon: Icons.star,
+                    isMandatory: true,
+                  ),
+                  const Divider(color: AppColors.border),
+                  _buildRequirementOption(
+                    context: context,
+                    title: 'Optional',
+                    description: 'Nice to have, but not required',
+                    icon: Icons.star_border,
+                    isMandatory: false,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text(
+              'CANCEL',
+              style: TextStyle(color: AppColors.textTertiary),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Step 4: Review
-  Widget _buildReviewStep(ThemeData theme) {
+  Widget _buildRequirementOption({
+    required BuildContext context,
+    required String title,
+    required String description,
+    required IconData icon,
+    required bool isMandatory,
+  }) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, isMandatory),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: isMandatory
+                    ? AppColors.primaryGradient
+                    : AppColors.accentGradient,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: AppColors.textPrimary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: AppColors.textTertiary,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================================
+  // STEP 4: REVIEW
+  // ============================================================================
+
+  Widget _buildReviewStep(BuildContext context, PostProvider provider) {
+    final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -535,15 +755,12 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             title: 'Review & Publish',
             subtitle: 'Make sure everything looks good',
           ),
-
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           // Preview Card
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
                 colors: [
                   AppColors.surface,
                   AppColors.surface.withOpacity(0.8),
@@ -551,7 +768,13 @@ class _CreatePostScreenState extends State<CreatePostScreen>
               ),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: AppColors.border),
-              boxShadow: AppColors.cardShadow,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -559,84 +782,162 @@ class _CreatePostScreenState extends State<CreatePostScreen>
               children: [
                 // Type Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     gradient: AppColors.primaryGradient,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    _postType,
+                    provider.postType ?? 'FYP Group',
                     style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
+                // Title
                 Text(
-                  _titleController.text,
-                  style: theme.textTheme.headlineSmall,
+                  provider.title ?? 'Untitled Project',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
 
                 const SizedBox(height: 12),
 
+                // Description
                 Text(
-                  _descriptionController.text,
-                  style: theme.textTheme.bodyMedium,
+                  provider.description ?? 'No description',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _selectedSkills.map((skill) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Text(
-                        skill,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-
-                const SizedBox(height: 20),
-
+                // Team Size & Deadline
                 Row(
                   children: [
-                    _buildInfoChip(
-                      icon: Icons.people_outline,
-                      text: 'Looking for $_teamSize',
+                    Icon(
+                      Icons.group,
+                      size: 16,
+                      color: AppColors.textTertiary,
                     ),
-                    const SizedBox(width: 12),
-                    if (_deadline != null)
-                      _buildInfoChip(
-                        icon: Icons.access_time,
-                        text: '${_deadline!.day}/${_deadline!.month}/${_deadline!.year}',
+                    const SizedBox(width: 6),
+                    Text(
+                      '${provider.teamSize} members',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textTertiary,
                       ),
+                    ),
+                    const SizedBox(width: 16),
+                    Icon(
+                      Icons.calendar_today,
+                      size: 16,
+                      color: AppColors.textTertiary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      provider.deadline != null
+                          ? '${provider.deadline!.day}/${provider.deadline!.month}/${provider.deadline!.year}'
+                          : 'No deadline',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
                   ],
                 ),
+
+                // Skills
+                if (provider.selectedSkills.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: provider.selectedSkills.map((skill) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.primary.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          skill,
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+                if (provider.lookingFor.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Looking For:',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.textSecondary,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: provider.lookingFor.map((role) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.accent.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          role,
+                          style: TextStyle(
+                            color: AppColors.accent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ],
             ),
           ),
+
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
+
+  // ============================================================================
+  // COMMON WIDGETS
+  // ============================================================================
 
   Widget _buildStepTitle({
     required ThemeData theme,
@@ -646,8 +947,14 @@ class _CreatePostScreenState extends State<CreatePostScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: theme.textTheme.displaySmall?.copyWith(fontSize: 28)),
-        const SizedBox(height: 8),
+        Text(
+          title,
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
         Text(
           subtitle,
           style: theme.textTheme.bodyMedium?.copyWith(
@@ -670,7 +977,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: isSelected ? AppColors.primaryGradient : null,
           color: isSelected ? null : AppColors.surface,
@@ -684,14 +991,18 @@ class _CreatePostScreenState extends State<CreatePostScreen>
           children: [
             Icon(
               icon,
-              color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
-              size: 32,
+              color: isSelected
+                  ? AppColors.textPrimary
+                  : AppColors.textSecondary,
+              size: 28,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
               type,
               style: TextStyle(
-                color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -704,17 +1015,18 @@ class _CreatePostScreenState extends State<CreatePostScreen>
   }
 
   Widget _buildTextField({
-    required TextEditingController controller,
     required String label,
     required String hint,
+    String? initialValue,
     int maxLines = 1,
+    required ValueChanged<String> onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: AppColors.textSecondary,
@@ -729,62 +1041,151 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             border: Border.all(color: AppColors.border),
           ),
           child: TextField(
-            controller: controller,
             maxLines: maxLines,
+            onChanged: onChanged,
+            controller: initialValue != null
+                ? TextEditingController(text: initialValue)
+                : null,
             style: const TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: AppColors.textTertiary),
+              hintStyle: const TextStyle(color: AppColors.textTertiary),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(20),
+              contentPadding: const EdgeInsets.all(16),
             ),
           ),
         ),
       ],
     );
   }
+  // Add this method to _CreatePostBottomSheetState
 
-  Widget _buildInfoChip({required IconData icon, required String text}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+  Widget _buildLookingForStep(BuildContext context, PostProvider provider) {
+    final theme = Theme.of(context);
+    final TextEditingController _roleController = TextEditingController();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.textSecondary, size: 16),
-          const SizedBox(width: 6),
+          _buildStepTitle(
+            theme: theme,
+            title: 'Looking For',
+            subtitle: 'What roles are you trying to fill?',
+          ),
+          const SizedBox(height: 24),
+
           Text(
-            text,
-            style: const TextStyle(
+            'ADD ROLES (${provider.lookingFor.length} added)',
+            style: theme.textTheme.labelSmall?.copyWith(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
+              letterSpacing: 1,
             ),
           ),
+          const SizedBox(height: 12),
+
+          // Add role input
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: TextField(
+                    controller: _roleController,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    decoration: const InputDecoration(
+                      hintText: 'e.g., Machine Learning Engineer',
+                      hintStyle: TextStyle(color: AppColors.textTertiary),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.accentGradient,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.add, color: AppColors.textPrimary),
+                  onPressed: () {
+                    if (_roleController.text.isNotEmpty) {
+                      provider.addLookingFor(_roleController.text);
+                      _roleController.clear();
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // Display added roles
+          if (provider.lookingFor.isNotEmpty) ...[
+            Text(
+              'SELECTED ROLES',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppColors.textSecondary,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: provider.lookingFor.map((role) {
+                return Chip(
+                  label: Text(role),
+                  onDeleted: () => provider.removeLookingFor(role),
+                  deleteIcon: const Icon(Icons.close, size: 16),
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  Widget _buildNavigationButtons(ThemeData theme) {
+  Widget _buildNavigationButtons(BuildContext context, PostProvider provider) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surface.withOpacity(0.95),
-        border: Border(
+        border: const Border(
           top: BorderSide(color: AppColors.border),
         ),
       ),
       child: SafeArea(
+        top: false,
         child: Row(
           children: [
-            if (_currentStep > 0)
+            // Back Button
+            if (provider.currentStep > 0)
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _previousStep,
+                  onPressed: () {
+                    provider.previousStep();
+                    _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textPrimary,
                     side: const BorderSide(color: AppColors.border),
@@ -796,35 +1197,53 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                   child: const Text('BACK'),
                 ),
               ),
-            if (_currentStep > 0) const SizedBox(width: 12),
+
+            if (provider.currentStep > 0) const SizedBox(width: 12),
+
+            // Next/Publish Button
             Expanded(
               flex: 2,
-              child: Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: AppColors.accentGradient,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: AppColors.glowShadow,
-                ),
-                child: ElevatedButton(
-                  onPressed: _currentStep < _totalSteps - 1
-                      ? _nextStep
-                      : () {
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (provider.currentStep < provider.totalSteps - 1) {
+                    provider.nextStep();
+                    _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  } else {
                     // Publish post
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                    print('Publishing post');
+                    await provider.createPost();
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Post created successfully!'),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Text(
-                    _currentStep < _totalSteps - 1 ? 'NEXT' : 'PUBLISH POST',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                    ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text(
+                  provider.currentStep < provider.totalSteps - 1
+                      ? 'NEXT'
+                      : 'PUBLISH POST',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
                   ),
                 ),
               ),
@@ -836,10 +1255,12 @@ class _CreatePostScreenState extends State<CreatePostScreen>
   }
 }
 
-// Wave Painter for Background
+// ============================================================================
+// WAVE PAINTER
+// ============================================================================
+
 class WavePainter extends CustomPainter {
   final double animation;
-
   WavePainter(this.animation);
 
   @override
@@ -851,7 +1272,6 @@ class WavePainter extends CustomPainter {
           AppColors.background,
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
   }
 

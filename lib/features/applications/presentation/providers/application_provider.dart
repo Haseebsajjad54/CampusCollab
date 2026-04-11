@@ -91,12 +91,22 @@ class ApplicationProvider extends ChangeNotifier {
     required String postId,
     required String message,
   }) async {
+    print('Submitting application');
+
     _state = _state.copyWith(status: ApplicationStateStatus.loading);
     notifyListeners();
 
     final result = await _submitApplicationUseCase(
       postId: postId,
       message: message,
+    );
+    result.fold(
+          (failure) {
+        print("Application failed: ${failure.message}");
+      },
+          (application) {
+        print("Application success: ${application.id}");
+      },
     );
 
     return result.fold(

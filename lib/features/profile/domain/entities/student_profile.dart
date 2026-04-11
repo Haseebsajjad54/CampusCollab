@@ -144,4 +144,7 @@ class Profile extends Equatable {
     createdAt,
     updatedAt,
   ];
+  /// All the getters of this profile class
+
+
 }

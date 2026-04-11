@@ -1,6 +1,10 @@
 import 'dart:io';
+import 'package:campus_collab/core/errors/failures.dart';
+import 'package:campus_collab/features/posts/domain/entities/post.dart';
+import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../auth/data/datasources/auth_local_datasource.dart';
 import '../../data/repositories/profile_repository_impl.dart';
 import '../../domain/entities/student_profile.dart';
 import '../../domain/usecases/get_profile_usecase.dart';
@@ -13,6 +17,7 @@ enum ProfileStatus {
   loading,
   success,
   error,
+  loaded,
 }
 
 /// Profile State
@@ -21,16 +26,24 @@ class ProfileState {
   final Profile? profile;
   final Map<String, int>? stats;
   final String? errorMessage;
+  final List<Post>? userPosts;
 
   ProfileState({
     required this.status,
     this.profile,
     this.stats,
     this.errorMessage,
+    this.userPosts,
   });
 
   factory ProfileState.initial() {
-    return ProfileState(status: ProfileStatus.initial);
+    return ProfileState(
+      status: ProfileStatus.initial,
+      profile: null,
+      stats: {},
+      userPosts: const [],
+      errorMessage: null,
+    );
   }
 
   ProfileState copyWith({
@@ -38,28 +51,36 @@ class ProfileState {
     Profile? profile,
     Map<String, int>? stats,
     String? errorMessage,
+    List<Post>? userPosts,
   }) {
     return ProfileState(
       status: status ?? this.status,
       profile: profile ?? this.profile,
       stats: stats ?? this.stats,
       errorMessage: errorMessage,
+      userPosts: userPosts ?? this.userPosts,
     );
   }
 
   bool get isLoading => status == ProfileStatus.loading;
   bool get hasError => status == ProfileStatus.error;
   bool get hasProfile => profile != null;
+  ProfileStatus get profileStatus => status;
 }
 
 /// Profile Provider
-///
-/// Manages profile state and operations
 class ProfileProvider extends ChangeNotifier {
   late final GetProfileUseCase _getProfileUseCase;
   late final UpdateProfileUseCase _updateProfileUseCase;
   late final UploadProfilePictureUseCase _uploadPictureUseCase;
   late final ProfileRepositoryImpl _repository;
+  late final authLocalDataSource = AuthLocalDataSourceImpl();
+  File? _tempImage;
+  File? get tempImage => _tempImage;
+  late final SupabaseClient supabaseClient = Supabase.instance.client;
+
+  final ValueNotifier<ProfileState> _stateNotifier = ValueNotifier(ProfileState.initial());
+  ValueNotifier<ProfileState> get stateNotifier => _stateNotifier;
 
   ProfileState _state = ProfileState.initial();
   ProfileState get state => _state;
@@ -69,9 +90,11 @@ class ProfileProvider extends ChangeNotifier {
   bool get isLoading => _state.isLoading;
   bool get hasError => _state.hasError;
   String? get errorMessage => _state.errorMessage;
+  List<Post>? get userPosts => _state.userPosts;
 
   ProfileProvider() {
     _initializeUseCases();
+    _setupAuthListener();
   }
 
   void _initializeUseCases() {
@@ -80,86 +103,167 @@ class ProfileProvider extends ChangeNotifier {
     _getProfileUseCase = GetProfileUseCase(_repository);
     _updateProfileUseCase = UpdateProfileUseCase(_repository);
     _uploadPictureUseCase = UploadProfilePictureUseCase(_repository);
+
+    // Only load profile if user is already logged in
+    if (supabase.auth.currentUser != null) {
+      loadCurrentProfile();
+    }
+  }
+
+  /// Listen to auth state changes
+  void _setupAuthListener() {
+    supabaseClient.auth.onAuthStateChange.listen((event) {
+      if (event.event == AuthChangeEvent.signedOut) {
+        // ✅ Clear all data on logout
+        _clearAllData();
+      } else if (event.event == AuthChangeEvent.signedIn) {
+        // ✅ Reload profile on login
+        loadCurrentProfile();
+      }
+    });
+  }
+
+  /// Clear all profile data
+  void _clearAllData() {
+    _state = ProfileState.initial();
+    _stateNotifier.value = _state;
+    notifyListeners();
+  }
+
+  /// Reset profile state to initial
+  void resetState() {
+    _clearAllData();
   }
 
   /// Load current user's profile
   Future<void> loadCurrentProfile() async {
-    _state = _state.copyWith(status: ProfileStatus.loading);
-    notifyListeners();
+    final currentUser = supabaseClient.auth.currentUser;
+
+    // ✅ If no user is logged in, reset state
+    if (currentUser == null) {
+      _clearAllData();
+      return;
+    }
+
+    // Prevent multiple loads
+    if (_state.status == ProfileStatus.loading) return;
+
+    _updateState(_state.copyWith(status: ProfileStatus.loading));
 
     final result = await _getProfileUseCase.getCurrentProfile();
 
-    result.fold(
-          (failure) {
-        _state = ProfileState(
+    await result.fold(
+          (failure) async {
+        _updateState(_state.copyWith(
           status: ProfileStatus.error,
           errorMessage: failure.message,
-        );
+        ));
       },
           (profile) async {
-        // Load stats
-        final statsResult = await _repository.getUserStats(profile.id);
+        try {
+          // Load stats
+          final statsResult = await _repository.getUserStats(profile.id);
 
-        _state = ProfileState(
-          status: ProfileStatus.success,
-          profile: profile,
-          stats: statsResult.getOrElse(() => {}),
-        );
+          _updateState(_state.copyWith(
+            status: ProfileStatus.success,
+            profile: profile,
+            stats: statsResult.getOrElse(() => {}),
+          ));
+
+          // Load user posts after profile is loaded
+          await fetchCurrentUserPosts();
+        } catch (e) {
+          _updateState(_state.copyWith(
+            status: ProfileStatus.success,
+            profile: profile,
+            stats: {},
+          ));
+          await fetchCurrentUserPosts();
+        }
       },
     );
+  }
+
+  /// Fetch current user's posts
+  Future<void> fetchCurrentUserPosts() async {
+    final currentUser = supabaseClient.auth.currentUser;
+
+    // ✅ If no user is logged in, reset posts
+    if (currentUser == null) {
+      _updateState(_state.copyWith(userPosts: []));
+      return;
+    }
+
+    try {
+      final result = await _repository.fetchCurrentUserPosts();
+
+      result.fold(
+            (failure) {
+          print('Error fetching posts: ${failure.message}');
+          _updateState(_state.copyWith(userPosts: []));
+        },
+            (posts) {
+          _updateState(_state.copyWith(userPosts: posts));
+        },
+      );
+    } catch (e) {
+      print('Error in fetchCurrentUserPosts: $e');
+      _updateState(_state.copyWith(userPosts: []));
+    }
+  }
+
+  /// Helper method to update state and notify listeners
+  void _updateState(ProfileState newState) {
+    _state = newState;
+    _stateNotifier.value = newState;
     notifyListeners();
   }
 
   /// Load profile by user ID
   Future<void> loadProfileById(String userId) async {
-    _state = _state.copyWith(status: ProfileStatus.loading);
-    notifyListeners();
+    _updateState(_state.copyWith(status: ProfileStatus.loading));
 
     final result = await _getProfileUseCase.getProfileById(userId);
 
     result.fold(
           (failure) {
-        _state = ProfileState(
+        _updateState(ProfileState(
           status: ProfileStatus.error,
           errorMessage: failure.message,
-        );
+        ));
       },
           (profile) async {
         // Load stats
         final statsResult = await _repository.getUserStats(profile.id);
 
-        _state = ProfileState(
+        _updateState(ProfileState(
           status: ProfileStatus.success,
           profile: profile,
           stats: statsResult.getOrElse(() => {}),
-        );
+        ));
       },
     );
-    notifyListeners();
   }
 
   /// Update profile
   Future<bool> updateProfile(Profile profile) async {
-    _state = _state.copyWith(status: ProfileStatus.loading);
-    notifyListeners();
+    _updateState(_state.copyWith(status: ProfileStatus.loading));
 
     final result = await _updateProfileUseCase.updateProfile(profile);
 
     return result.fold(
           (failure) {
-        _state = _state.copyWith(
+        _updateState(_state.copyWith(
           status: ProfileStatus.error,
           errorMessage: failure.message,
-        );
-        notifyListeners();
+        ));
         return false;
       },
           (updatedProfile) {
-        _state = _state.copyWith(
+        _updateState(_state.copyWith(
           status: ProfileStatus.success,
           profile: updatedProfile,
-        );
-        notifyListeners();
+        ));
         return true;
       },
     );
@@ -168,36 +272,36 @@ class ProfileProvider extends ChangeNotifier {
   /// Upload profile picture
   Future<bool> uploadProfilePicture(File image) async {
     try {
-      final result = await _uploadPictureUseCase(image);
+      final currentUser = supabaseClient.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
 
-      return result.fold(
-            (failure) {
-          _state = _state.copyWith(
-            status: ProfileStatus.error,
-            errorMessage: failure.message,
-          );
-          notifyListeners();
-          return false;
-        },
-            (imageUrl) {
-          // Update profile with new image URL
-          if (_state.profile != null) {
-            _state = _state.copyWith(
-              profile: _state.profile!.copyWith(
-                profilePictureUrl: imageUrl,
-              ),
-            );
-            notifyListeners();
-          }
-          return true;
-        },
-      );
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final extension = image.path.split('.').last;
+      final fileName = '${currentUser.id}_$timestamp.$extension';
+      final path = 'profile_pictures/$fileName';
+
+      await supabaseClient.storage
+          .from('ProfileImages')
+          .upload(path, image);
+
+      final publicUrl = supabaseClient.storage
+          .from('ProfileImages')
+          .getPublicUrl(path);
+
+      await supabaseClient
+          .from('profiles')
+          .update({'profile_picture_url': publicUrl})
+          .eq('id', currentUser.id);
+
+      // Reload profile to get updated picture
+      await loadCurrentProfile();
+
+      print('✅ Upload successful!');
+      return true;
     } catch (e) {
-      _state = _state.copyWith(
-        status: ProfileStatus.error,
-        errorMessage: e.toString(),
-      );
-      notifyListeners();
+      print('❌ Upload failed: $e');
       return false;
     }
   }
@@ -209,8 +313,7 @@ class ProfileProvider extends ChangeNotifier {
 
       return result.fold(
             (failure) {
-          _state = _state.copyWith(errorMessage: failure.message);
-          notifyListeners();
+          _updateState(_state.copyWith(errorMessage: failure.message));
           return false;
         },
             (_) {
@@ -231,8 +334,7 @@ class ProfileProvider extends ChangeNotifier {
 
       return result.fold(
             (failure) {
-          _state = _state.copyWith(errorMessage: failure.message);
-          notifyListeners();
+          _updateState(_state.copyWith(errorMessage: failure.message));
           return false;
         },
             (_) {
@@ -253,8 +355,7 @@ class ProfileProvider extends ChangeNotifier {
 
       return result.fold(
             (failure) {
-          _state = _state.copyWith(errorMessage: failure.message);
-          notifyListeners();
+          _updateState(_state.copyWith(errorMessage: failure.message));
           return false;
         },
             (_) {
@@ -275,8 +376,7 @@ class ProfileProvider extends ChangeNotifier {
 
       return result.fold(
             (failure) {
-          _state = _state.copyWith(errorMessage: failure.message);
-          notifyListeners();
+          _updateState(_state.copyWith(errorMessage: failure.message));
           return false;
         },
             (_) {
@@ -297,19 +397,17 @@ class ProfileProvider extends ChangeNotifier {
 
       return result.fold(
             (failure) {
-          _state = _state.copyWith(errorMessage: failure.message);
-          notifyListeners();
+          _updateState(_state.copyWith(errorMessage: failure.message));
           return false;
         },
             (_) {
           // Update local state
           if (_state.profile != null) {
-            _state = _state.copyWith(
+            _updateState(_state.copyWith(
               profile: _state.profile!.copyWith(
                 availabilityStatus: status,
               ),
-            );
-            notifyListeners();
+            ));
           }
           return true;
         },
@@ -321,7 +419,26 @@ class ProfileProvider extends ChangeNotifier {
 
   /// Clear error
   void clearError() {
-    _state = _state.copyWith(errorMessage: null);
-    notifyListeners();
+    _updateState(_state.copyWith(errorMessage: null));
+  }
+
+  void uploadImage() async {
+    try {
+      //final result = await authLocalDataSource.uploadImage();
+    } catch (e) {
+      if (kDebugMode) {
+        print(e);
+      }
+    }
+  }
+
+  void testBucket() {
+    _repository.testBucketAccess();
+  }
+
+  @override
+  void dispose() {
+    _stateNotifier.dispose();
+    super.dispose();
   }
 }

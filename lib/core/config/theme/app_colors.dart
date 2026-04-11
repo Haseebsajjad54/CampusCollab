@@ -92,4 +92,8 @@ class AppColors {
       spreadRadius: 2,
     ),
   ];
+
+  static Color get accentPink => const Color(0xFFF472B6);
+
+  static Color get accentPurple => const Color(0xFF9370DB);
 }

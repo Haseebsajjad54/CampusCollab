@@ -191,6 +191,27 @@ class NotificationTile extends StatelessWidget {
         return AppColors.warning;
       case domain.NotificationType.system:
         return AppColors.textSecondary;
+      case domain.NotificationType.applicationRejected:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case domain.NotificationType.applicationReceived:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case domain.NotificationType.applicationAccepted:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case domain.NotificationType.newMatch:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case domain.NotificationType.newMessage:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case domain.NotificationType.deadlineReminder:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case domain.NotificationType.projectUpdate:
+        // TODO: Handle this case.
+        throw UnimplementedError();
     }
   }
 

@@ -7,7 +7,14 @@ enum NotificationType {
   message,          // New message
   postInterest,     // Someone interested in post
   teamInvite,       // Team invitation
-  system,           // System notification
+  system,
+  applicationRejected,
+  applicationReceived,
+  applicationAccepted,
+  newMatch,
+  newMessage,
+  deadlineReminder,
+  projectUpdate,// System notification
 }
 
 /// Notification Entity
@@ -53,6 +60,27 @@ class Notification extends Equatable {
         return '🤝';
       case NotificationType.system:
         return '🔔';
+      case NotificationType.applicationRejected:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case NotificationType.applicationReceived:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case NotificationType.applicationAccepted:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case NotificationType.newMatch:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case NotificationType.newMessage:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case NotificationType.deadlineReminder:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case NotificationType.projectUpdate:
+        // TODO: Handle this case.
+        throw UnimplementedError();
     }
   }
 
@@ -128,4 +156,5 @@ class Notification extends Equatable {
     isRead,
     createdAt,
   ];
+
 }

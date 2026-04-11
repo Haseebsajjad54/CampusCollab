@@ -57,4 +57,12 @@ class UserModel extends AppUser {
   }
 
   String toJsonString() => jsonEncode(toJson());
+
+  static UserModel fromEntity(AppUser appUser) {
+    return UserModel(
+      id: appUser.id,
+      email: appUser.email,
+      fullName: appUser.fullName,
+    );
+  }
 }

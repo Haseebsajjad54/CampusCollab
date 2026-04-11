@@ -6,9 +6,6 @@ import '../../domain/entities/notification.dart' as domain;
 import '../../domain/repositories/notification_repository.dart';
 import '../models/notification_model.dart';
 
-/// Notification Repository Implementation
-///
-/// Complete Supabase integration with real-time subscriptions
 class NotificationRepositoryImpl implements NotificationRepository {
   final SupabaseClient supabaseClient;
   RealtimeChannel? _realtimeChannel;
@@ -23,11 +20,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
   }) async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure( 'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       final response = await supabaseClient
@@ -43,13 +37,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
       return Right(notifications);
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure( 'Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure( 'Failed to get notifications: ${e.toString()}'),
-      );
+      return Left(ServerFailure('Failed to get notifications: ${e.toString()}'));
     }
   }
 
@@ -57,11 +47,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
   Future<Either<Failure, List<domain.Notification>>> getUnreadNotifications() async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure('User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       final response = await supabaseClient
@@ -77,15 +64,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
       return Right(notifications);
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure( 'Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure(
-           'Failed to get unread notifications: ${e.toString()}',
-        ),
-      );
+      return Left(ServerFailure('Failed to get unread notifications: ${e.toString()}'));
     }
   }
 
@@ -93,11 +74,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
   Future<Either<Failure, int>> getUnreadCount() async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure( 'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       final response = await supabaseClient
@@ -108,15 +86,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
       return Right(response.length);
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure( 'Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure(
-           'Failed to get unread count: ${e.toString()}',
-        ),
-      );
+      return Left(ServerFailure('Failed to get unread count: ${e.toString()}'));
     }
   }
 
@@ -124,11 +96,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
   Future<Either<Failure, void>> markAsRead(String notificationId) async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure( 'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       await supabaseClient
@@ -139,13 +108,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
       return const Right(null);
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure( 'Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure( 'Failed to mark as read: ${e.toString()}'),
-      );
+      return Left(ServerFailure('Failed to mark as read: ${e.toString()}'));
     }
   }
 
@@ -153,11 +118,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
   Future<Either<Failure, void>> markAllAsRead() async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure( 'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       await supabaseClient
@@ -168,13 +130,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
       return const Right(null);
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure( 'Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure( 'Failed to mark all as read: ${e.toString()}'),
-      );
+      return Left(ServerFailure('Failed to mark all as read: ${e.toString()}'));
     }
   }
 
@@ -182,11 +140,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
   Future<Either<Failure, void>> deleteNotification(String notificationId) async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure( 'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       await supabaseClient
@@ -197,13 +152,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
       return const Right(null);
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure( 'Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure( 'Failed to delete notification: ${e.toString()}'),
-      );
+      return Left(ServerFailure('Failed to delete notification: ${e.toString()}'));
     }
   }
 
@@ -211,11 +162,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
   Future<Either<Failure, void>> clearAllNotifications() async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure( 'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       await supabaseClient
@@ -225,31 +173,22 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
       return const Right(null);
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure('Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure(
-           'Failed to clear notifications: ${e.toString()}',
-        ),
-      );
+      return Left(ServerFailure('Failed to clear notifications: ${e.toString()}'));
     }
   }
 
   @override
   Stream<domain.Notification> listenToNotifications() {
     final currentUser = supabaseClient.auth.currentUser;
-
     if (currentUser == null) {
       _notificationController.addError('User not authenticated');
       return _notificationController.stream;
     }
 
-    // Remove existing subscription if any
     _realtimeChannel?.unsubscribe();
 
-    // Create new real-time channel
     _realtimeChannel = supabaseClient
         .channel('notifications:${currentUser.id}')
         .onPostgresChanges(
@@ -277,7 +216,6 @@ class NotificationRepositoryImpl implements NotificationRepository {
     return _notificationController.stream;
   }
 
-  /// Dispose resources
   void dispose() {
     _realtimeChannel?.unsubscribe();
     _notificationController.close();

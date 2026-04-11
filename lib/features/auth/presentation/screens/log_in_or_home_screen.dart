@@ -1,9 +1,7 @@
 import 'package:campus_collab/app.dart';
 import 'package:campus_collab/features/auth/presentation/providers/auth_provider.dart';
-import 'package:campus_collab/features/posts/presentation/screens/post_feed_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'login_screen.dart';
 
 class LogInOrHomeScreen extends StatelessWidget {
@@ -11,15 +9,18 @@ class LogInOrHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<AuthProvider>();
 
-    // Access the provider
-    final provider = Provider.of<AuthProvider>(context);
-
-    // Decide which screen to show
-    if (provider.user == null) {
+    if (provider.status == AuthStatus.loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (provider.isAuthenticated) {
+      return MainScreen();
+    }
+    else {
       return const LoginScreen();
-    } else {
-      return const MainScreen();
     }
   }
 }

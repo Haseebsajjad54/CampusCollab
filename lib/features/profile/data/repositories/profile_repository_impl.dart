@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'package:campus_collab/features/posts/data/models/post_model.dart';
 import 'package:dartz/dartz.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../posts/domain/entities/post.dart';
 import '../../domain/entities/student_profile.dart';
 import '../../domain/repositories/profile_repository.dart';
 import '../models/student_profile_model.dart';
@@ -27,6 +29,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
       return await getProfileById(currentUser.id);
     } catch (e) {
+      print("Error in getting current profile: $e");
       return Left(
         ServerFailure(  'Failed to get profile: ${e.toString()}'),
       );
@@ -35,6 +38,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
   @override
   Future<Either<Failure, Profile>> getProfileById(String userId) async {
+    print("Getting profile by ID: $userId");
     try {
       // Get profile data
       final profileData = await supabaseClient
@@ -69,13 +73,20 @@ class ProfileRepositoryImpl implements ProfileRepository {
         'skills': skills,
         'interests': interests,
       });
+      print("Profile retrieved: $profile");
 
       return Right(profile);
     } on PostgrestException catch (e) {
+      print("Error in getting profile by ID: $e");
+      if (e.code == '404') {
+        print("Profile not found for user ID: $userId");
+
+      }
       return Left(
         ServerFailure(  'Database error: ${e.message}'),
       );
     } catch (e) {
+      print("Error in getting profile by ID: $e");
       return Left(
         ServerFailure(  'Failed to get profile: ${e.toString()}'),
       );
@@ -114,54 +125,134 @@ class ProfileRepositoryImpl implements ProfileRepository {
     }
   }
 
+  // ProfileRepositoryImpl mein uploadProfilePicture method update karein
+
   @override
   Future<Either<Failure, String>> uploadProfilePicture(File image) async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure(  'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
+      }
+
+      print('📤 Starting upload for user: ${currentUser.id}');
+      print('📁 File path: ${image.path}');
+      print('📏 File size: ${await image.length()} bytes');
+
+      // Check if file exists
+      if (!await image.exists()) {
+        return const Left(ServerFailure('Image file does not exist'));
       }
 
       // Generate unique filename
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final extension = image.path.split('.').last;
       final fileName = '${currentUser.id}_$timestamp.$extension';
-
-      // Upload to Supabase Storage
       final path = 'profile_pictures/$fileName';
 
-      await supabaseClient.storage
-          .from('profiles')
-          .upload(path, image);
+      print('📝 Generated filename: $fileName');
+      print('🛣️ Storage path: $path');
+
+      // Try to upload with more detailed error handling
+      try {
+        await supabaseClient.storage
+            .from('ProfileImages')
+            .upload(
+          path,
+          image,
+          fileOptions: const FileOptions(
+            cacheControl: '3600',
+            upsert: false,
+          ),
+        );
+        print('✅ Upload successful!');
+      } on StorageException catch (e) {
+        print('❌ Storage exception: ${e.message}');
+        print('❌ Status code: ${e.statusCode}');
+        print('❌ Error details: ${e.error}');
+        return Left(ServerFailure('Storage error: ${e.message}'));
+      }
 
       // Get public URL
       final publicUrl = supabaseClient.storage
-          .from('profiles')
+          .from('ProfileImages')
           .getPublicUrl(path);
 
+      print('🔗 Public URL: $publicUrl');
+
+      // Verify URL is accessible
+      try {
+        final response = await supabaseClient.storage
+            .from('ProfileImages')
+            .createSignedUrl(path, 60);
+        print('✅ Signed URL created successfully');
+      } catch (e) {
+        print('⚠️ Warning: Could not create signed URL: $e');
+      }
+
       // Update profile with new picture URL
-      await supabaseClient
+      final updateResult = await supabaseClient
           .from('profiles')
-          .update({
-        'profile_picture_url': publicUrl,
-        'updated_at': DateTime.now().toIso8601String(),
-      })
-          .eq('id', currentUser.id);
+          .update({'profile_picture_url': publicUrl})
+          .eq('id', currentUser.id)
+          .select();
+
+      print('📝 Profile update result: $updateResult');
 
       return Right(publicUrl);
-    } on StorageException catch (e) {
-      return Left(
-        ServerFailure(  'Storage error: ${e.message}'),
-      );
     } catch (e) {
-      return Left(
-        ServerFailure(  'Failed to upload image: ${e.toString()}'),
-      );
+      print('❌ Unexpected error: $e');
+      return Left(ServerFailure('Failed to upload image: ${e.toString()}'));
     }
   }
+  // @override
+  // Future<Either<Failure, String>> uploadProfilePicture(File image) async {
+  //   try {
+  //     final currentUser = supabaseClient.auth.currentUser;
+  //
+  //     if (currentUser == null) {
+  //       return const Left(
+  //         AuthenticationFailure(  'User not authenticated'),
+  //       );
+  //     }
+  //
+  //     // Generate unique filename
+  //     final timestamp = DateTime.now().millisecondsSinceEpoch;
+  //     final extension = image.path.split('.').last;
+  //     final fileName = '${currentUser.id}_$timestamp.$extension';
+  //
+  //     // Upload to Supabase Storage
+  //     final path = 'profile_pictures/$fileName';
+  //
+  //     await supabaseClient.storage
+  //         .from('ProfileImages')
+  //         .upload(path, image);
+  //
+  //     // Get public URL
+  //     final publicUrl = supabaseClient.storage
+  //         .from('ProfileImages')
+  //         .getPublicUrl(path);
+  //
+  //     // Update profile with new picture URL
+  //     await supabaseClient
+  //         .from('profiles')
+  //         .update({
+  //       'profile_picture_url': publicUrl,
+  //       'updated_at': DateTime.now().toIso8601String(),
+  //     })
+  //         .eq('id', currentUser.id);
+  //
+  //     return Right(publicUrl);
+  //   } on StorageException catch (e) {
+  //     return Left(
+  //       ServerFailure(  'Storage error: ${e.message}'),
+  //     );
+  //   } catch (e) {
+  //     return Left(
+  //       ServerFailure(  'Failed to upload image: ${e.toString()}'),
+  //     );
+  //   }
+  // }
 
   @override
   Future<Either<Failure, void>> addSkill(String skillName) async {
@@ -432,6 +523,105 @@ class ProfileRepositoryImpl implements ProfileRepository {
     } catch (e) {
       return Left(
         ServerFailure(  'Failed to get stats: ${e.toString()}'),
+      );
+    }
+  }
+  Future<void> testBucketAccess() async {
+    print('=== STORAGE DEBUGGING ===');
+
+    // 1. Check authentication
+    final user = supabaseClient.auth.currentUser;
+    print('👤 Current user: ${user?.email}');
+    print('👤 User ID: ${user?.id}');
+
+    if (user == null) {
+      print('❌ ERROR: User not authenticated! Please login first.');
+      return;
+    }
+
+    // 2. Check session token
+    final session = supabaseClient.auth.currentSession;
+    print('🔑 Session exists: ${session != null}');
+    print('🔑 Access token: ${session?.accessToken.substring(0, 20)}...');
+
+    // 3. Try to list buckets with error details
+    try {
+      final buckets = await supabaseClient.storage.listBuckets();
+      print('📦 Buckets found: ${buckets.map((b) => b.id).toList()}');
+
+      if (buckets.isEmpty) {
+        print('❌ No buckets returned. This could be due to:');
+        print('   - Missing SELECT policy on storage.buckets table');
+        print('   - User role issue (make sure target role is "authenticated")');
+        print('   - API key permissions issue');
+      }
+    } catch (e) {
+      print('❌ Error listing buckets: $e');
+
+      // Check for specific error types
+      if (e.toString().contains('403')) {
+        print('🔍 This is a PERMISSION error - RLS policy missing on storage.buckets');
+      } else if (e.toString().contains('401')) {
+        print('🔍 This is an AUTHENTICATION error - token invalid/expired');
+      } else if (e.toString().contains('404')) {
+        print('🔍 This is a NOT FOUND error - storage endpoint issue');
+      }
+    }
+
+    // 4. Try direct bucket access without listing
+    print('\n🔄 Trying direct bucket access...');
+    try {
+      // Try to list files in the bucket (this will fail if bucket doesn't exist or no permission)
+      final files = await supabaseClient.storage
+          .from('ProfileImages')
+          .list();
+      print('✅ Can access ProfileImages bucket directly! Files: ${files.length}');
+    } catch (e) {
+      print('❌ Cannot access ProfileImages bucket directly: $e');
+
+      if (e.toString().contains('bucket')) {
+        print('🔍 Bucket "ProfileImages" might not exist or name is incorrect');
+      } else if (e.toString().contains('permission') || e.toString().contains('policy')) {
+        print('🔍 Missing SELECT policy on storage.objects for this bucket');
+      }
+    }
+  }
+
+  // In your ProfileRepositoryImpl class
+
+  Future<Either<Failure, List<Post>>> fetchCurrentUserPosts() async {
+    try {
+      final currentUser = supabaseClient.auth.currentUser;
+      if (currentUser == null) {
+        return const Left(
+          AuthenticationFailure('User not authenticated'),
+        );
+      }
+
+      final response = await supabaseClient
+          .from('posts')
+          .select('*')
+          .eq('author_id', currentUser.id)
+          .order('created_at', ascending: false);
+
+      // Convert the response to List<Post>
+      final List<Post> posts = [];
+      for (var postData in response) {
+        try {
+          final post = PostModel.fromJson(postData);
+          print('✅ Post fetched: $post');
+          posts.add(post);
+        } catch (e) {
+          print('Error parsing post: $e');
+          continue;
+        }
+      }
+
+      return Right(posts);
+    } catch (e) {
+      print("Error in fetching current user posts: $e");
+      return Left(
+        ServerFailure('Failed to fetch posts: ${e.toString()}'),
       );
     }
   }

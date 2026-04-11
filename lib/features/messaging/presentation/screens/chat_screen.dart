@@ -1,3 +1,4 @@
+// chat_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/config/theme/app_colors.dart';
@@ -6,9 +7,6 @@ import '../providers/messaging_provider.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/message_bubble.dart';
 
-/// Chat Screen
-///
-/// Individual chat interface with real-time messaging
 class ChatScreen extends StatefulWidget {
   final Conversation conversation;
 
@@ -24,35 +22,49 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isSending = false;
+  bool _isConnected = true; // Default to true, will check in initState
 
   @override
   void initState() {
     super.initState();
-    _loadMessages();
-    _setupRealtimeListener();
-    _markAsRead();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkConnection();
+    });
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    // Stop listening to messages when leaving chat
-    context.read<MessagingProvider>().stopListeningToMessages();
-    super.dispose();
+  Future<void> _checkConnection() async {
+    final provider = context.read<MessagingProvider>();
+    final currentUserId = provider.currentUser.id;
+    final otherUserId = widget.conversation.otherUserId;
+
+    final isConnected = await provider.areUsersConnected(currentUserId, otherUserId);
+
+    setState(() {
+      _isConnected = isConnected;
+    });
+
+    if (_isConnected) {
+      _loadMessages();
+      _setupRealtimeListener();
+      _markAsRead();
+    }
   }
 
   Future<void> _loadMessages() async {
+    if (!mounted) return;
     final provider = context.read<MessagingProvider>();
     await provider.loadMessages(widget.conversation.id);
     _scrollToBottom();
   }
 
   void _setupRealtimeListener() {
+    if (!mounted) return;
     final provider = context.read<MessagingProvider>();
     provider.listenToMessages(widget.conversation.id);
   }
 
   Future<void> _markAsRead() async {
+    if (!mounted) return;
     final provider = context.read<MessagingProvider>();
     await provider.markAsRead(widget.conversation.id);
   }
@@ -76,14 +88,12 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: _buildAppBar(),
-      body: Column(
+      body: _isConnected
+          ? Column(
         children: [
-          // Messages list
           Expanded(
             child: _buildMessagesList(),
           ),
-
-          // Input
           Consumer<MessagingProvider>(
             builder: (context, provider, _) {
               return ChatInput(
@@ -93,6 +103,59 @@ class _ChatScreenState extends State<ChatScreen> {
             },
           ),
         ],
+      )
+          : _buildNotConnectedView(),
+    );
+  }
+
+  Widget _buildNotConnectedView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.link_off,
+            size: 80,
+            color: AppColors.textTertiary.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Not Connected',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'You can only message users you are connected with.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.textTertiary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => _sendConnectionRequest(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Send Connection Request'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _sendConnectionRequest() async {
+    // Navigate to profile or send request
+    // This would typically call your connection provider
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Connection request feature coming soon'),
+        backgroundColor: AppColors.warning,
       ),
     );
   }
@@ -107,7 +170,6 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       title: Row(
         children: [
-          // Avatar
           Container(
             width: 40,
             height: 40,
@@ -122,9 +184,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 color: AppColors.surface,
                 image: widget.conversation.otherUserAvatar != null
                     ? DecorationImage(
-                  image: NetworkImage(
-                    widget.conversation.otherUserAvatar!,
-                  ),
+                  image: NetworkImage(widget.conversation.otherUserAvatar!),
                   fit: BoxFit.cover,
                 )
                     : null,
@@ -138,10 +198,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   : null,
             ),
           ),
-
           const SizedBox(width: 12),
-
-          // Name and department
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,14 +238,12 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context, provider, _) {
         final currentUserId = provider.currentUser.id ?? '';
 
-        // Loading
         if (provider.isLoadingMessages) {
           return const Center(
             child: CircularProgressIndicator(),
           );
         }
 
-        // Error
         if (provider.messagesStatus == MessagingStatus.error) {
           return Center(
             child: Column(
@@ -216,7 +271,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
         final messages = provider.getMessages(widget.conversation.id);
 
-        // Empty
         if (messages.isEmpty) {
           return Center(
             child: Column(
@@ -246,7 +300,6 @@ class _ChatScreenState extends State<ChatScreen> {
           );
         }
 
-        // Messages list
         return ListView.builder(
           controller: _scrollController,
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -256,7 +309,6 @@ class _ChatScreenState extends State<ChatScreen> {
             final message = messages[index];
             final isMe = message.isFromMe(currentUserId);
 
-            // Check if should show avatar
             final showAvatar = index == messages.length - 1 ||
                 messages[index + 1].senderId != message.senderId;
 
@@ -292,6 +344,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _scrollToBottom();
     } else {
       if (mounted) {
+        print('Error sending message: ${provider.messagesError}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

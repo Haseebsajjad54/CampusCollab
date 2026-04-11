@@ -1,18 +1,20 @@
-import 'package:equatable/equatable.dart';
-
-class Post extends Equatable {
+class Post {
   final String id;
   final String authorId;
-  final String postType; // project_partner, fyp_group
+  final String postType;
   final String title;
   final String description;
-  final String? projectDomain; // AI, Web, Mobile, IoT, etc.
-  final int? requiredTeamSize;
+  final String? projectDomain;
+  final int teamSize;
   final int currentTeamSize;
   final DateTime? deadline;
-  final String status; // open, in_progress, closed, completed
-  final bool isPublished;
+  final String? duration;
+  final List<String> lookingFor;
+  final List<String> selectedSkills;
+  final String? status;
+  final bool? isPublished;
   final int viewCount;
+  final int matchScore;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -23,32 +25,17 @@ class Post extends Equatable {
     required this.title,
     required this.description,
     this.projectDomain,
-    this.requiredTeamSize,
+    required this.teamSize,
     this.currentTeamSize = 1,
     this.deadline,
+    this.duration,
+    this.lookingFor = const [],
+    this.selectedSkills = const [],
     this.status = 'open',
     this.isPublished = true,
     this.viewCount = 0,
+    this.matchScore = 0,
     required this.createdAt,
     required this.updatedAt,
   });
-
-  @override
-  List<Object?> get props => [
-    id,
-    authorId,
-    postType,
-    title,
-    description,
-    projectDomain,
-    requiredTeamSize,
-    currentTeamSize,
-    deadline,
-    status,
-    isPublished,
-    viewCount,
-    createdAt,
-    updatedAt,
-  ];
-
 }

@@ -1,4 +1,5 @@
 import '../../domain/entities/conversation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ConversationModel extends Conversation {
   const ConversationModel({
@@ -17,20 +18,35 @@ class ConversationModel extends Conversation {
 
   /// JSON → Model
   factory ConversationModel.fromJson(Map<String, dynamic> json) {
+
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id ?? '';
+
+    // Determine the other participant
+    final isParticipant1 = json['participant1_id'] == currentUserId;
+    final otherUser = isParticipant1
+        ? json['participant2']
+        : json['participant1'];
+
+    final unreadCount = isParticipant1
+        ? (json['unread_count_participant1'] as int? ?? 0)
+        : (json['unread_count_participant2'] as int? ?? 0);
+
     return ConversationModel(
       id: json['id'],
-      otherUserId: json['otherUserId'],
-      otherUserName: json['otherUserName'],
-      otherUserAvatar: json['otherUserAvatar'],
-      otherUserDepartment: json['otherUserDepartment'],
-      lastMessage: json['lastMessage'],
-      lastMessageSenderId: json['lastMessageSenderId'],
-      lastMessageTime: json['lastMessageTime'] != null
-          ? DateTime.parse(json['lastMessageTime'])
+      otherUserId: isParticipant1
+          ? json['participant2_id']
+          : json['participant1_id'],
+      otherUserName: otherUser?['full_name'] ?? 'Unknown User',
+      otherUserAvatar: otherUser?['profile_picture_url'],
+      otherUserDepartment: otherUser?['department'],
+      lastMessage: json['last_message'],
+      lastMessageSenderId: json['last_message_sender_id'],
+      lastMessageTime: json['last_message_time'] != null
+          ? DateTime.parse(json['last_message_time'])
           : null,
-      unreadCount: json['unreadCount'] ?? 0,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      unreadCount: unreadCount,
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
     );
   }
 

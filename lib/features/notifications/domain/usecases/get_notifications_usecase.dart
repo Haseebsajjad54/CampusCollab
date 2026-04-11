@@ -1,32 +1,40 @@
-import 'package:campus_collab/features/notifications/domain/repositories/notification_repository.dart';
 import 'package:dartz/dartz.dart';
-
 import '../../../../core/errors/failures.dart';
 import '../entities/notification.dart';
+import '../repositories/notification_repository.dart';
 
-class GetNotificationsUseCase{
+class GetNotificationsUseCase {
   final NotificationRepository repository;
 
   GetNotificationsUseCase(this.repository);
 
-  Future<Either<Failure, List<Notification>>> call() async {
-    try {
-      return Right(await repository.getUnreadNotifications() as List<Notification>);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-
-    }
-
+  // Get all notifications
+  Future<Either<Failure, List<Notification>>> getNotifications({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final result = await repository.getNotifications(limit: limit, offset: offset);
+    return result.fold(
+          (failure) => Left(failure),
+          (notifications) => Right(notifications),
+    );
   }
 
-  // Unread Notifications Count
+  // Get unread notifications
+  Future<Either<Failure, List<Notification>>> getUnreadNotifications() async {
+    final result = await repository.getUnreadNotifications();
+    return result.fold(
+          (failure) => Left(failure),
+          (notifications) => Right(notifications),
+    );
+  }
+
+  // Get unread count
   Future<Either<Failure, int>> getUnreadCount() async {
-    try {
-      return Right((await repository.getUnreadCount()) as int);
-    }catch(e){
-      return Left(ServerFailure(e.toString()));
-    }
-
+    final result = await repository.getUnreadCount();
+    return result.fold(
+          (failure) => Left(failure),
+          (count) => Right(count),
+    );
   }
-
 }

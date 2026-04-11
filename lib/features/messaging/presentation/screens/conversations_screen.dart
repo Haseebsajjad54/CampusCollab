@@ -1,3 +1,4 @@
+// conversations_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/config/theme/app_colors.dart';
@@ -5,9 +6,6 @@ import '../providers/messaging_provider.dart';
 import '../widgets/conversation_tile.dart';
 import 'chat_screen.dart';
 
-/// Conversations Screen
-///
-/// Displays list of all conversations
 class ConversationsScreen extends StatefulWidget {
   const ConversationsScreen({super.key});
 
@@ -16,14 +14,28 @@ class ConversationsScreen extends StatefulWidget {
 }
 
 class _ConversationsScreenState extends State<ConversationsScreen> {
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
-    _loadConversations();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initializeData();
+      }
+    });
+  }
+
+  Future<void> _initializeData() async {
+    if (_isInitialized) return;
+    _isInitialized = true;
+
+    await _loadConversations();
     _setupRealtimeListeners();
   }
 
   Future<void> _loadConversations() async {
+    if (!mounted) return;
     final provider = context.read<MessagingProvider>();
     await provider.loadConversations();
   }
@@ -37,21 +49,17 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.background,
+      ),
+      child: Stack(
         children: [
-          // Gradient Background
           _buildGradientBackground(),
-
-          // Content
           SafeArea(
             child: Column(
               children: [
-                // Header
                 _buildHeader(theme),
-
-                // Conversations List
                 Expanded(
                   child: _buildConversationsList(),
                 ),
@@ -127,14 +135,12 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   Widget _buildConversationsList() {
     return Consumer<MessagingProvider>(
       builder: (context, provider, _) {
-        // Loading
         if (provider.isLoadingConversations) {
           return const Center(
             child: CircularProgressIndicator(),
           );
         }
 
-        // Error
         if (provider.conversationsStatus == MessagingStatus.error) {
           return Center(
             child: Column(
@@ -168,7 +174,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           );
         }
 
-        // Empty
         if (provider.conversations.isEmpty) {
           return Center(
             child: Column(
@@ -188,7 +193,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Start chatting with your teammates!',
+                  'Start by connecting with others!',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textTertiary,
                   ),
@@ -198,8 +203,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           );
         }
 
-        // List
-        final currentUserId = provider.currentUser.id ?? '';
+        final currentUserId = provider.currentUser.id ;
 
         return RefreshIndicator(
           onRefresh: _loadConversations,
@@ -227,6 +231,16 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                     ),
                   );
                 },
+                // child: Container(
+                //   margin: const EdgeInsets.only(bottom: 16),
+                //   decoration: BoxDecoration(
+                //     color: AppColors.surface,
+                //     borderRadius: BorderRadius.circular(16),
+                //   ),
+                //   width: 100,
+                //   height: 100,
+                //
+                // ),
                 child: ConversationTile(
                   conversation: conversation,
                   currentUserId: currentUserId,
@@ -244,9 +258,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ChatScreen(
-          conversation: conversation,
-        ),
+        builder: (_) => ChatScreen(conversation: conversation),
       ),
     );
   }

@@ -8,10 +8,6 @@ import '../../domain/repositories/messaging_repository.dart';
 import '../models/conversation_model.dart';
 import '../models/message_model.dart';
 
-/// Messaging Repository Implementation
-///
-/// Complete Supabase integration with real-time messaging
-///
 class MessagingRepositoryImpl implements MessagingRepository {
   final SupabaseClient supabaseClient;
   RealtimeChannel? _messagesChannel;
@@ -26,11 +22,8 @@ class MessagingRepositoryImpl implements MessagingRepository {
   Future<Either<Failure, List<Conversation>>> getConversations() async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure( 'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       final response = await supabaseClient
@@ -52,34 +45,56 @@ class MessagingRepositoryImpl implements MessagingRepository {
           .order('updated_at', ascending: false);
 
       final conversations = (response as List)
-          .map((json) => ConversationModel.fromJson(json,))
+          .map((json) => ConversationModel.fromJson(json))
           .toList();
 
       return Right(conversations);
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure(  'Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure(
-            'Failed to get conversations: ${e.toString()}',
-        ),
-      );
+      return Left(ServerFailure('Failed to get conversations: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Message>>> getMessages(String conversationId) async {
+    try {
+      final currentUser = supabaseClient.auth.currentUser;
+      if (currentUser == null) {
+        return const Left(AuthenticationFailure('User not authenticated'));
+      }
+
+      final response = await supabaseClient
+          .from('messages')
+          .select('''
+            *,
+            sender:profiles!messages_sender_id_fkey(
+              full_name,
+              profile_picture_url
+            )
+          ''')
+          .eq('conversation_id', conversationId)
+          .order('created_at', ascending: true);
+
+      final messages = (response as List)
+          .map((json) => MessageModel.fromJson(json))
+          .toList();
+
+      return Right(messages);
+    } on PostgrestException catch (e) {
+      return Left(ServerFailure('Database error: ${e.message}'));
+    } catch (e) {
+      return Left(ServerFailure('Failed to get messages: ${e.toString()}'));
     }
   }
 
   @override
   Future<Either<Failure, Conversation>> getOrCreateConversation(
-      String otherUserId,
-      ) async {
+      String otherUserId) async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure( 'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       // Check if conversation already exists
@@ -105,10 +120,7 @@ class MessagingRepositoryImpl implements MessagingRepository {
           .maybeSingle();
 
       if (existing != null) {
-        final conversation = ConversationModel.fromJson(
-          existing,
-        );
-        return Right(conversation);
+        return Right(ConversationModel.fromJson(existing));
       }
 
       // Create new conversation
@@ -133,65 +145,11 @@ class MessagingRepositoryImpl implements MessagingRepository {
           ''')
           .single();
 
-      final conversation = ConversationModel.fromJson(
-        newConversation,
-
-      );
-
-      return Right(conversation);
+      return Right(ConversationModel.fromJson(newConversation));
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure(  'Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure(
-            'Failed to get/create conversation: ${e.toString()}',
-        ),
-      );
-    }
-  }
-
-  @override
-  Future<Either<Failure, List<Message>>> getMessages(
-      String conversationId,
-      ) async {
-    try {
-      final currentUser = supabaseClient.auth.currentUser;
-
-      if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure(  'User not authenticated'),
-        );
-      }
-
-      final response = await supabaseClient
-          .from('messages')
-          .select('''
-            *,
-            sender:profiles!messages_sender_id_fkey(
-              full_name,
-              profile_picture_url
-            )
-          ''')
-          .eq('conversation_id', conversationId)
-          .order('created_at', ascending: true);
-
-      final messages = (response as List)
-          .map((json) => MessageModel.fromJson(json))
-          .toList();
-
-      return Right(messages);
-    } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure(  'Database error: ${e.message}'),
-      );
-    } catch (e) {
-      return Left(
-        ServerFailure(
-            'Failed to get messages: ${e.toString()}',
-        ),
-      );
+      return Left(ServerFailure('Failed to get/create conversation: ${e.toString()}'));
     }
   }
 
@@ -202,11 +160,8 @@ class MessagingRepositoryImpl implements MessagingRepository {
   }) async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure(  'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       // Insert message
@@ -248,22 +203,21 @@ class MessagingRepositoryImpl implements MessagingRepository {
           ? 'unread_count_participant2'
           : 'unread_count_participant1';
 
-      await supabaseClient.rpc('increment_unread', params: {
-        'conversation_id': conversationId,
-        'field_name': unreadField,
-      });
+      // Use raw SQL to increment unread count
+      await supabaseClient
+          .from('conversations')
+          .update({
+        unreadField: supabaseClient.rpc('increment_value', params: {
+          'current_value': conversation[unreadField] ?? 0,
+        })
+      })
+          .eq('id', conversationId);
 
       return Right(message);
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure(  'Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure(
-            'Failed to send   ${e.toString()}',
-        ),
-      );
+      return Left(ServerFailure('Failed to send message: ${e.toString()}'));
     }
   }
 
@@ -271,11 +225,8 @@ class MessagingRepositoryImpl implements MessagingRepository {
   Future<Either<Failure, void>> markAsRead(String conversationId) async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure(  'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       // Mark messages as read
@@ -305,15 +256,9 @@ class MessagingRepositoryImpl implements MessagingRepository {
 
       return const Right(null);
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure(  'Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure(
-            'Failed to mark as read: ${e.toString()}',
-        ),
-      );
+      return Left(ServerFailure('Failed to mark as read: ${e.toString()}'));
     }
   }
 
@@ -321,11 +266,8 @@ class MessagingRepositoryImpl implements MessagingRepository {
   Future<Either<Failure, int>> getUnreadCount() async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
-
       if (currentUser == null) {
-        return const Left(
-          AuthenticationFailure(  'User not authenticated'),
-        );
+        return const Left(AuthenticationFailure('User not authenticated'));
       }
 
       final conversations = await supabaseClient
@@ -344,31 +286,22 @@ class MessagingRepositoryImpl implements MessagingRepository {
 
       return Right(totalUnread);
     } on PostgrestException catch (e) {
-      return Left(
-        ServerFailure(  'Database error: ${e.message}'),
-      );
+      return Left(ServerFailure('Database error: ${e.message}'));
     } catch (e) {
-      return Left(
-        ServerFailure(
-            'Failed to get unread count: ${e.toString()}',
-        ),
-      );
+      return Left(ServerFailure('Failed to get unread count: ${e.toString()}'));
     }
   }
 
   @override
   Stream<Message> listenToMessages(String conversationId) {
     final currentUser = supabaseClient.auth.currentUser;
-
     if (currentUser == null) {
       _messagesController.addError('User not authenticated');
       return _messagesController.stream;
     }
 
-    // Remove existing subscription
     _messagesChannel?.unsubscribe();
 
-    // Create new real-time channel
     _messagesChannel = supabaseClient
         .channel('messages:$conversationId')
         .onPostgresChanges(
@@ -382,7 +315,6 @@ class MessagingRepositoryImpl implements MessagingRepository {
       ),
       callback: (payload) async {
         try {
-          // Fetch complete message with sender info
           final messageData = await supabaseClient
               .from('messages')
               .select('''
@@ -410,16 +342,13 @@ class MessagingRepositoryImpl implements MessagingRepository {
   @override
   Stream<Conversation> listenToConversations() {
     final currentUser = supabaseClient.auth.currentUser;
-
     if (currentUser == null) {
       _conversationsController.addError('User not authenticated');
       return _conversationsController.stream;
     }
 
-    // Remove existing subscription
     _conversationsChannel?.unsubscribe();
 
-    // Create new real-time channel
     _conversationsChannel = supabaseClient
         .channel('conversations:${currentUser.id}')
         .onPostgresChanges(
@@ -428,12 +357,10 @@ class MessagingRepositoryImpl implements MessagingRepository {
       table: 'conversations',
       callback: (payload) async {
         try {
-          // Check if this conversation involves current user
           final participant1 = payload.newRecord['participant1_id'];
           final participant2 = payload.newRecord['participant2_id'];
 
           if (participant1 == currentUser.id || participant2 == currentUser.id) {
-            // Fetch complete conversation with profile info
             final convData = await supabaseClient
                 .from('conversations')
                 .select('''
@@ -452,12 +379,7 @@ class MessagingRepositoryImpl implements MessagingRepository {
                 .eq('id', payload.newRecord['id'])
                 .single();
 
-            final conversation = ConversationModel.fromJson(
-              convData,
-
-            );
-
-            _conversationsController.add(conversation);
+            _conversationsController.add(ConversationModel.fromJson(convData));
           }
         } catch (e) {
           _conversationsController.addError(e);
@@ -469,7 +391,6 @@ class MessagingRepositoryImpl implements MessagingRepository {
     return _conversationsController.stream;
   }
 
-  /// Dispose resources
   void dispose() {
     _messagesChannel?.unsubscribe();
     _conversationsChannel?.unsubscribe();

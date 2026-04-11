@@ -1,5 +1,5 @@
-
 import '../../domain/entities/message.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MessageModel extends Message {
   const MessageModel({
@@ -15,15 +15,17 @@ class MessageModel extends Message {
 
   /// Convert JSON → Model
   factory MessageModel.fromJson(Map<String, dynamic> json) {
+    final sender = json['sender'] as Map<String, dynamic>?;
+
     return MessageModel(
       id: json['id'],
-      conversationId: json['conversationId'],
-      senderId: json['senderId'],
-      senderName: json['senderName'],
-      senderAvatar: json['senderAvatar'],
+      conversationId: json['conversation_id'],
+      senderId: json['sender_id'],
+      senderName: sender?['full_name'] ?? 'Unknown User',
+      senderAvatar: sender?['profile_picture_url'],
       content: json['content'],
-      isRead: json['isRead'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
+      isRead: json['is_read'] ?? false,
+      createdAt: DateTime.parse(json['created_at']),
     );
   }
 
@@ -31,13 +33,11 @@ class MessageModel extends Message {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'conversationId': conversationId,
-      'senderId': senderId,
-      'senderName': senderName,
-      'senderAvatar': senderAvatar,
+      'conversation_id': conversationId,
+      'sender_id': senderId,
       'content': content,
-      'isRead': isRead,
-      'createdAt': createdAt.toIso8601String(),
+      'is_read': isRead,
+      'created_at': createdAt.toIso8601String(),
     };
   }
 
@@ -54,10 +54,4 @@ class MessageModel extends Message {
       createdAt: message.createdAt,
     );
   }
-
-  // Model -> Entity
-
-
-
-
 }

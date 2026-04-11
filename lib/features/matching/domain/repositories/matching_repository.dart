@@ -34,4 +34,16 @@ abstract class MatchingRepository {
   ///
   /// Forces recalculation of all matches
   Future<Either<Failure, List<MatchSuggestion>>> refreshMatches();
+
+  /// Send connection request to specific user
+  ///
+  /// [userId] - ID of user to send connection request
+  Future<Either<Failure, bool>> sendConnectionRequest(String senderId, String receiverId);
+
+  Future<Either<Failure, bool>> acceptConnectionRequest(String userId, String requesterId);
+
+
+
+
+
 }

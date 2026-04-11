@@ -41,11 +41,12 @@ class SubmitApplicationUseCase {
         ),
       );
     }
-
+    
     // Call repository
     return await repository.submitApplication(
       postId: postId,
       message: message,
     );
+
   }
 }

@@ -1,3 +1,4 @@
+// messaging_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,7 +9,6 @@ import '../../domain/usecases/get_conversations_usecase.dart';
 import '../../domain/usecases/mark_as_read_usecase.dart';
 import '../../domain/usecases/send_message_usecase.dart';
 
-/// Messaging State Status
 enum MessagingStatus {
   initial,
   loading,
@@ -16,9 +16,6 @@ enum MessagingStatus {
   error,
 }
 
-/// Messaging Provider
-///
-/// Manages conversations and messages with real-time updates
 class MessagingProvider extends ChangeNotifier {
   late final GetConversationsUseCase _getConversationsUseCase;
   late final SendMessageUseCase _sendMessageUseCase;
@@ -33,7 +30,7 @@ class MessagingProvider extends ChangeNotifier {
 
   // Messages state
   MessagingStatus _messagesStatus = MessagingStatus.initial;
-  Map<String, List<Message>> _messagesCache = {};
+  final Map<String, List<Message>> _messagesCache = {};
   String? _messagesError;
 
   // Real-time subscriptions
@@ -54,7 +51,6 @@ class MessagingProvider extends ChangeNotifier {
 
   User get currentUser => _repository.supabaseClient.auth.currentUser!;
 
-
   MessagingProvider() {
     _initializeUseCases();
   }
@@ -63,8 +59,25 @@ class MessagingProvider extends ChangeNotifier {
     final supabase = Supabase.instance.client;
     _repository = MessagingRepositoryImpl(supabaseClient: supabase);
     _getConversationsUseCase = GetConversationsUseCase(_repository);
-    _sendMessageUseCase = SendMessageUseCase(_repository, content: '', conversationId: '');
+    _sendMessageUseCase = SendMessageUseCase(_repository);
     _markAsReadUseCase = MarkAsReadUseCase(_repository);
+  }
+
+  /// Check if users are connected
+  Future<bool> areUsersConnected(String userId, String otherUserId) async {
+    try {
+      final profile = await _repository.supabaseClient
+          .from('profiles')
+          .select('connections')
+          .eq('id', userId)
+          .single();
+
+      final connections = List<String>.from(profile['connections'] ?? []);
+      return connections.contains(otherUserId);
+    } catch (e) {
+      debugPrint('Error checking connection: $e');
+      return false;
+    }
   }
 
   /// Load conversations
@@ -84,8 +97,6 @@ class MessagingProvider extends ChangeNotifier {
         _conversations = conversations;
         _conversationsStatus = MessagingStatus.success;
         _conversationsError = null;
-
-        // Also load unread count
         await _loadUnreadCount();
       },
     );
@@ -118,11 +129,29 @@ class MessagingProvider extends ChangeNotifier {
     return _messagesCache[conversationId] ?? [];
   }
 
-  /// Send message
+  /// Send message with connection check
   Future<bool> sendMessage({
     required String conversationId,
     required String content,
   }) async {
+    final currentUserId = currentUser.id;
+
+    // Get conversation to check participants
+    final conversation = _conversations.firstWhere(
+          (c) => c.id == conversationId,
+      orElse: () => throw Exception('Conversation not found'),
+    );
+
+    final otherUserId = conversation.otherUserId;
+
+    // ✅ Check if users are connected
+    final areConnected = await areUsersConnected(currentUserId, otherUserId);
+    if (!areConnected) {
+      _messagesError = 'You can only message connected users';
+      notifyListeners();
+      return false;
+    }
+
     final result = await _sendMessageUseCase(
       conversationId: conversationId,
       content: content,
@@ -135,7 +164,6 @@ class MessagingProvider extends ChangeNotifier {
         return false;
       },
           (message) {
-        // Add message to cache
         final messages = _messagesCache[conversationId] ?? [];
         _messagesCache[conversationId] = [...messages, message];
         notifyListeners();
@@ -153,7 +181,6 @@ class MessagingProvider extends ChangeNotifier {
         debugPrint('Failed to mark as read: ${failure.message}');
       },
           (_) {
-        // Update local state
         final index = _conversations.indexWhere((c) => c.id == conversationId);
         if (index != -1) {
           _conversations[index] = _conversations[index].copyWith(
@@ -163,7 +190,6 @@ class MessagingProvider extends ChangeNotifier {
           notifyListeners();
         }
 
-        // Mark messages as read in cache
         final messages = _messagesCache[conversationId];
         if (messages != null) {
           _messagesCache[conversationId] = messages.map((m) {
@@ -176,6 +202,16 @@ class MessagingProvider extends ChangeNotifier {
 
   /// Get or create conversation with user
   Future<Conversation?> getOrCreateConversation(String otherUserId) async {
+    // ✅ Check if users are connected before creating conversation
+    final currentUserId = currentUser.id;
+    final areConnected = await areUsersConnected(currentUserId, otherUserId);
+
+    if (!areConnected) {
+      _conversationsError = 'You can only message connected users';
+      notifyListeners();
+      return null;
+    }
+
     final result = await _getConversationsUseCase.getOrCreateConversation(
       otherUserId,
     );
@@ -187,7 +223,6 @@ class MessagingProvider extends ChangeNotifier {
         return null;
       },
           (conversation) {
-        // Add to conversations if not exists
         final exists = _conversations.any((c) => c.id == conversation.id);
         if (!exists) {
           _conversations.insert(0, conversation);
@@ -205,7 +240,6 @@ class MessagingProvider extends ChangeNotifier {
     final stream = _repository.listenToMessages(conversationId);
     _messagesSubscription = stream.listen(
           (message) {
-        // Add message to cache
         final messages = _messagesCache[conversationId] ?? [];
         _messagesCache[conversationId] = [...messages, message];
         notifyListeners();
@@ -223,11 +257,9 @@ class MessagingProvider extends ChangeNotifier {
     final stream = _repository.listenToConversations();
     _conversationsSubscription = stream.listen(
           (conversation) {
-        // Update or add conversation
         final index = _conversations.indexWhere((c) => c.id == conversation.id);
         if (index != -1) {
           _conversations[index] = conversation;
-          // Move to top
           final conv = _conversations.removeAt(index);
           _conversations.insert(0, conv);
         } else {

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/config/theme/app_colors.dart';
-
+import '../../../applications/presentation/providers/application_provider.dart';
+import '../../domain/entities/post.dart';
+import '../providers/post_provider.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final String postId;
@@ -23,45 +26,6 @@ class _PostDetailScreenState extends State<PostDetailScreen>
 
   bool _isBookmarked = false;
   bool _hasApplied = false;
-
-  // Mock post data
-  final Map<String, dynamic> _post = {
-    'id': '1',
-    'type': 'FYP Group',
-    'title': 'AI-Powered Health Monitoring System',
-    'author': 'Sarah Chen',
-    'authorId': 'user_1',
-    'authorImage': 'https://i.pravatar.cc/150?img=1',
-    'authorBio': 'Final year CS student passionate about AI and healthcare',
-    'department': 'Computer Science',
-    'year': 4,
-    'cgpa': 3.85,
-    'description': '''We're building an innovative health monitoring system that uses computer vision and machine learning to track vital signs in real-time.
-
-The system will analyze video feeds to detect heart rate, respiratory rate, and stress levels without requiring any physical contact with sensors. This could revolutionize healthcare accessibility in remote areas.
-
-We're looking for passionate developers who want to make a real impact in healthcare technology.''',
-    'requiredSkills': [
-      {'name': 'Python', 'mandatory': true},
-      {'name': 'TensorFlow', 'mandatory': true},
-      {'name': 'Computer Vision', 'mandatory': true},
-      {'name': 'Flutter', 'mandatory': false},
-      {'name': 'Firebase', 'mandatory': false},
-    ],
-    'lookingFor': [
-      'Machine Learning Engineer',
-      'Computer Vision Specialist',
-      'Mobile App Developer',
-    ],
-    'teamSize': 4,
-    'currentMembers': 2,
-    'deadline': '2024-03-15',
-    'duration': '6 months',
-    'matchScore': 92,
-    'timePosted': '2 hours ago',
-    'viewCount': 156,
-    'applicationCount': 12,
-  };
 
   @override
   void initState() {
@@ -85,6 +49,11 @@ We're looking for passionate developers who want to make a real impact in health
     ));
 
     _controller.forward();
+
+    // Load post data after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPost();
+    });
   }
 
   @override
@@ -93,11 +62,128 @@ We're looking for passionate developers who want to make a real impact in health
     super.dispose();
   }
 
+  Future<void> _loadPost() async {
+    final provider = Provider.of<PostProvider>(context, listen: false);
+    await provider.getPost(widget.postId);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final size = MediaQuery.of(context).size;
+    final postProvider = Provider.of<PostProvider>(context);
+    final post = postProvider.currentPost;
 
+    // Show loading state
+    if (postProvider.isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+          ),
+        ),
+      );
+    }
+
+    // Show error state
+    if (postProvider.error != null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 80,
+                color: AppColors.error.withOpacity(0.5),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Error',
+                style: theme.textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  postProvider.error!,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  postProvider.clearError();
+                  _loadPost();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Retry'),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Show not found state
+    if (post == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.search_off,
+                size: 80,
+                color: AppColors.textTertiary.withOpacity(0.5),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Post not found',
+                style: theme.textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'The post you\'re looking for doesn\'t exist',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    print(post.selectedSkills);
+    print(post.selectedSkills);
+
+    // Display post data
     return Scaffold(
       backgroundColor: AppColors.background,
       extendBodyBehindAppBar: true,
@@ -125,13 +211,13 @@ We're looking for passionate developers who want to make a real impact in health
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Match Score Badge
-                          _buildMatchScoreBadge(theme),
+                          _buildMatchScoreBadge(theme, post.matchScore),
 
                           const SizedBox(height: 24),
 
                           // Title
                           Text(
-                            _post['title'],
+                            post.title,
                             style: theme.textTheme.displaySmall?.copyWith(
                               fontSize: 32,
                               height: 1.2,
@@ -141,12 +227,22 @@ We're looking for passionate developers who want to make a real impact in health
                           const SizedBox(height: 16),
 
                           // Meta Info
-                          _buildMetaInfo(theme),
+                          _buildMetaInfo(
+                            theme,
+                            _getDisplayPostType(post.postType),
+                            _formatTimeAgo(post.createdAt),
+                            post.viewCount,
+                            post.currentTeamSize,
+                            post.teamSize,
+                          ),
 
                           const SizedBox(height: 32),
 
                           // Author Card
-                          _buildAuthorCard(theme),
+                          _buildAuthorCard(
+                            theme,
+                            post,
+                          ),
 
                           const SizedBox(height: 32),
 
@@ -155,7 +251,7 @@ We're looking for passionate developers who want to make a real impact in health
                             theme: theme,
                             title: 'About The Project',
                             child: Text(
-                              _post['description'],
+                              post.description,
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 height: 1.8,
                                 fontSize: 16,
@@ -166,39 +262,45 @@ We're looking for passionate developers who want to make a real impact in health
                           const SizedBox(height: 32),
 
                           // Required Skills
-                          _buildSection(
-                            theme: theme,
-                            title: 'Required Skills',
-                            child: Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: (_post['requiredSkills'] as List)
-                                  .map((skill) => _buildSkillChip(
-                                skill['name'],
-                                isMandatory: skill['mandatory'],
-                              ))
-                                  .toList(),
+                          if (post.selectedSkills.isNotEmpty)
+                            _buildSection(
+                              theme: theme,
+                              title: 'Required Skills',
+                              child: Wrap(
+                                spacing: 12,
+                                runSpacing: 12,
+                                children: post.selectedSkills
+                                    .map((skill) => _buildSkillChip(
+                                  skill,
+                                  isMandatory: true,
+                                ))
+                                    .toList(),
+                              ),
                             ),
-                          ),
 
                           const SizedBox(height: 32),
 
                           // Looking For
-                          _buildSection(
-                            theme: theme,
-                            title: 'Looking For',
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: (_post['lookingFor'] as List)
-                                  .map((role) => _buildRoleItem(theme, role))
-                                  .toList(),
+                          if (post.lookingFor.isNotEmpty)
+                            _buildSection(
+                              theme: theme,
+                              title: 'Looking For',
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: post.lookingFor
+                                    .map((role) => _buildRoleItem(theme, role))
+                                    .toList(),
+                              ),
                             ),
-                          ),
 
                           const SizedBox(height: 32),
 
                           // Project Details
-                          _buildProjectDetails(theme),
+                          _buildProjectDetails(
+                            theme,
+                            post.deadline,
+                            post.duration ?? 'Not specified',
+                          ),
 
                           const SizedBox(height: 100),
                         ],
@@ -211,7 +313,7 @@ We're looking for passionate developers who want to make a real impact in health
           ),
 
           // Bottom Action Bar
-          _buildBottomActionBar(theme),
+          _buildBottomActionBar(theme, post.title),
         ],
       ),
     );
@@ -291,9 +393,7 @@ We're looking for passionate developers who want to make a real impact in health
     );
   }
 
-  Widget _buildMatchScoreBadge(ThemeData theme) {
-    final score = _post['matchScore'] as int;
-
+  Widget _buildMatchScoreBadge(ThemeData theme, int matchScore) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
@@ -329,7 +429,7 @@ We're looking for passionate developers who want to make a real impact in health
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '$score% Perfect Match',
+                '$matchScore% Perfect Match',
                 style: TextStyle(
                   color: AppColors.accent,
                   fontSize: 18,
@@ -351,29 +451,29 @@ We're looking for passionate developers who want to make a real impact in health
     );
   }
 
-  Widget _buildMetaInfo(ThemeData theme) {
+  Widget _buildMetaInfo(ThemeData theme, String type, String timePosted, int viewCount, int currentMembers, int teamSize) {
     return Wrap(
       spacing: 16,
       runSpacing: 12,
       children: [
         _buildMetaChip(
           icon: Icons.category_outlined,
-          text: _post['type'],
+          text: type,
           color: AppColors.primary,
         ),
         _buildMetaChip(
           icon: Icons.people_outline,
-          text: '${_post['currentMembers']}/${_post['teamSize']} Members',
+          text: '$currentMembers/$teamSize Members',
           color: AppColors.accentBlue,
         ),
         _buildMetaChip(
           icon: Icons.access_time,
-          text: _post['timePosted'],
+          text: timePosted,
           color: AppColors.textSecondary,
         ),
         _buildMetaChip(
           icon: Icons.visibility_outlined,
-          text: '${_post['viewCount']} views',
+          text: '$viewCount views',
           color: AppColors.textSecondary,
         ),
       ],
@@ -412,7 +512,7 @@ We're looking for passionate developers who want to make a real impact in health
     );
   }
 
-  Widget _buildAuthorCard(ThemeData theme) {
+  Widget _buildAuthorCard(ThemeData theme, Post post) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -448,18 +548,11 @@ We're looking for passionate developers who want to make a real impact in health
                     ),
                   ],
                 ),
-                padding: const EdgeInsets.all(3),
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: DecorationImage(
-                      image: NetworkImage(_post['authorImage']),
-                      fit: BoxFit.cover,
-                    ),
-                    border: Border.all(
-                      color: AppColors.background,
-                      width: 3,
-                    ),
+                child: const Center(
+                  child: Icon(
+                    Icons.person,
+                    size: 32,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -472,34 +565,15 @@ We're looking for passionate developers who want to make a real impact in health
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _post['author'],
+                      'Team Leader',
                       style: theme.textTheme.titleLarge,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${_post['department']} • Year ${_post['year']}',
+                      'ID: ${post.authorId.substring(0, 8)}...',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: AppColors.textSecondary,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.star,
-                          size: 16,
-                          color: AppColors.accent,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'CGPA ${_post['cgpa']}',
-                          style: TextStyle(
-                            color: AppColors.accent,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),
@@ -530,16 +604,6 @@ We're looking for passionate developers who want to make a real impact in health
                 ),
               ),
             ],
-          ),
-
-          const SizedBox(height: 16),
-
-          Text(
-            _post['authorBio'],
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSecondary,
-              fontStyle: FontStyle.italic,
-            ),
           ),
         ],
       ),
@@ -574,9 +638,7 @@ We're looking for passionate developers who want to make a real impact in health
         color: isMandatory ? null : AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isMandatory
-              ? AppColors.primary
-              : AppColors.border,
+          color: isMandatory ? AppColors.primary : AppColors.border,
           width: isMandatory ? 2 : 1,
         ),
         boxShadow: isMandatory
@@ -611,25 +673,6 @@ We're looking for passionate developers who want to make a real impact in health
               fontWeight: FontWeight.w700,
             ),
           ),
-          if (isMandatory)
-            Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.accent,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'Required',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -662,7 +705,7 @@ We're looking for passionate developers who want to make a real impact in health
     );
   }
 
-  Widget _buildProjectDetails(ThemeData theme) {
+  Widget _buildProjectDetails(ThemeData theme, DateTime? deadline, String duration) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -682,7 +725,9 @@ We're looking for passionate developers who want to make a real impact in health
           _buildDetailRow(
             icon: Icons.calendar_today_outlined,
             label: 'Application Deadline',
-            value: _post['deadline'],
+            value: deadline != null
+                ? '${deadline.day}/${deadline.month}/${deadline.year}'
+                : 'No deadline',
             color: AppColors.warning,
           ),
 
@@ -691,17 +736,8 @@ We're looking for passionate developers who want to make a real impact in health
           _buildDetailRow(
             icon: Icons.schedule_outlined,
             label: 'Project Duration',
-            value: _post['duration'],
+            value: duration,
             color: AppColors.accentBlue,
-          ),
-
-          const SizedBox(height: 16),
-
-          _buildDetailRow(
-            icon: Icons.description_outlined,
-            label: 'Total Applications',
-            value: '${_post['applicationCount']} students',
-            color: AppColors.success,
           ),
         ],
       ),
@@ -754,7 +790,7 @@ We're looking for passionate developers who want to make a real impact in health
     );
   }
 
-  Widget _buildBottomActionBar(ThemeData theme) {
+  Widget _buildBottomActionBar(ThemeData theme, String postTitle) {
     return Positioned(
       bottom: 0,
       left: 0,
@@ -777,11 +813,10 @@ We're looking for passionate developers who want to make a real impact in health
         child: SafeArea(
           child: Row(
             children: [
-              // Secondary Button
               Expanded(
                 child: OutlinedButton(
                   onPressed: () {
-                    // Save for later
+                    setState(() => _isBookmarked = !_isBookmarked);
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textPrimary,
@@ -811,18 +846,13 @@ We're looking for passionate developers who want to make a real impact in health
                   ),
                 ),
               ),
-
               const SizedBox(width: 12),
-
-              // Primary Button
               Expanded(
                 flex: 2,
                 child: Container(
                   height: 60,
                   decoration: BoxDecoration(
-                    gradient: _hasApplied
-                        ? null
-                        : AppColors.accentGradient,
+                    gradient: _hasApplied ? null : AppColors.accentGradient,
                     color: _hasApplied ? AppColors.success : null,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: _hasApplied
@@ -836,7 +866,7 @@ We're looking for passionate developers who want to make a real impact in health
                     ],
                   ),
                   child: ElevatedButton(
-                    onPressed: _hasApplied ? null : _showApplySheet,
+                    onPressed: _hasApplied ? null : () => _showApplySheet(postTitle),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
@@ -873,17 +903,28 @@ We're looking for passionate developers who want to make a real impact in health
     );
   }
 
-  void _showApplySheet() {
+  void _showApplySheet(String title) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ApplicationBottomSheet(
-        postTitle: _post['title'],
-        onApply: (message) {
-          setState(() => _hasApplied = true);
-          Navigator.pop(context);
-          _showSuccessSnackbar();
+        postTitle: title,
+        onApply: (message) async {
+          final provider = Provider.of<ApplicationProvider>(context, listen: false);
+
+          final success = await provider.submitApplication(
+            postId: widget.postId,
+            message: message,
+          );
+
+          if (success) {
+            setState(() => _hasApplied = true);
+            if (mounted) {
+              Navigator.pop(context);
+            }
+            _showSuccessSnackbar();
+          }
         },
       ),
     );
@@ -914,6 +955,42 @@ We're looking for passionate developers who want to make a real impact in health
 
   void _showShareOptions(BuildContext context) {
     // Share functionality
+  }
+
+  String _getDisplayPostType(String category) {
+    switch (category) {
+      case 'academic_project':
+        return 'FYP Group';
+      case 'research':
+        return 'Research';
+      case 'hackathon':
+        return 'Hackathon';
+      case 'startup':
+        return 'Startup';
+      case 'competition':
+        return 'Competition';
+      case 'study_group':
+        return 'Study Group';
+      default:
+        return category;
+    }
+  }
+
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 7) {
+      return '${difference.inDays ~/ 7} weeks ago';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hours ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minutes ago';
+    } else {
+      return 'Just now';
+    }
   }
 }
 
@@ -961,7 +1038,6 @@ class _ApplicationBottomSheetState extends State<ApplicationBottomSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle
             Center(
               child: Container(
                 width: 40,
@@ -972,29 +1048,21 @@ class _ApplicationBottomSheetState extends State<ApplicationBottomSheet> {
                 ),
               ),
             ),
-
             const SizedBox(height: 24),
-
-            // Title
             Text(
               'Apply to Project',
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontSize: 24,
               ),
             ),
-
             const SizedBox(height: 8),
-
             Text(
               widget.postTitle,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
-
             const SizedBox(height: 24),
-
-            // Message Input
             Text(
               'WHY DO YOU WANT TO JOIN?',
               style: TextStyle(
@@ -1004,9 +1072,7 @@ class _ApplicationBottomSheetState extends State<ApplicationBottomSheet> {
                 letterSpacing: 1,
               ),
             ),
-
             const SizedBox(height: 12),
-
             Container(
               decoration: BoxDecoration(
                 color: AppColors.background,
@@ -1025,10 +1091,7 @@ class _ApplicationBottomSheetState extends State<ApplicationBottomSheet> {
                 ),
               ),
             ),
-
             const SizedBox(height: 24),
-
-            // Submit Button
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -1069,7 +1132,6 @@ class _ApplicationBottomSheetState extends State<ApplicationBottomSheet> {
                 ),
               ),
             ),
-
             const SizedBox(height: 12),
           ],
         ),
@@ -1093,10 +1155,7 @@ class _ApplicationBottomSheetState extends State<ApplicationBottomSheet> {
     }
 
     setState(() => _isSubmitting = true);
-
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 1));
-
     widget.onApply(_messageController.text);
+    setState(() => _isSubmitting = false);
   }
 }
